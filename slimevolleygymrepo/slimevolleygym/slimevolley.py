@@ -437,15 +437,6 @@ class Agent:
       while(self.isColliding(p)):
         self.x += abx
         self.y += aby
-    # ux = self.vx - p.vx
-    # uy = self.vy - p.vy
-    # un = ux*nx + uy*ny
-    # unx = nx*(un*2.) # added factor of 2
-    # uny = ny*(un*2.) # added factor of 2
-    # ux -= unx
-    # uy -= uny
-    # self.vx = ux + p.vx
-    # self.vy = uy + p.vy
 
   def move(self):
     self.x += self.vx * TIMESTEP
@@ -667,7 +658,7 @@ class Game:
     if self.delayScreen.status():
       self.ball.applyAcceleration(0, GRAVITY)
       self.ball.limitSpeed(0, MAX_BALL_SPEED)
-      # self.ball.move()
+      self.ball.move()
 
     if (self.ball.isColliding(self.agent1)):
       self.ball.bounce(self.agent1)
