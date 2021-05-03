@@ -425,11 +425,11 @@ class Agent:
     if (abx == 0 and aby*aby <= 2*self.r*self.r): # special cases when p is on top of the agent, exactly alligned
       self.vy = 0
       if (self.y > p.y and self.y != p.y + p.r):
-        self.y = p.y + p.r
+        self.y = p.y + p.r + self.desired_vy
     else:
       abd = math.sqrt(abx*abx+aby*aby)
       abx /= abd # normalize 
-      aby /= abd #!!!
+      aby /= abd 
       nx = abx # reuse calculation
       ny = aby
       abx *= NUDGE
@@ -667,7 +667,7 @@ class Game:
     if self.delayScreen.status():
       self.ball.applyAcceleration(0, GRAVITY)
       self.ball.limitSpeed(0, MAX_BALL_SPEED)
-      self.ball.move()
+      # self.ball.move()
 
     if (self.ball.isColliding(self.agent1)):
       self.ball.bounce(self.agent1)
