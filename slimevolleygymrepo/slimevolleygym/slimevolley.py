@@ -32,7 +32,7 @@ REF_W = 24*2
 REF_H = REF_W
 REF_U = 1.5 # ground height
 REF_WALL_WIDTH = 1.0 # wall width
-REF_WALL_HEIGHT = 3.5
+REF_WALL_HEIGHT = 5
 PLAYER_SPEED_X = 10*1.75
 PLAYER_SPEED_Y = 10*1.35
 MAX_BALL_SPEED = 15*1.5
@@ -411,27 +411,51 @@ class Agent:
       self.desired_vx = PLAYER_SPEED_X
     if jump:
       self.desired_vy = PLAYER_SPEED_Y
-
-  def getDistTeammate(self, tx, ty): # returns distance squared from teammate 
-    #FIX ME: Only evaluating according to x, should also consider y
-    #dy = ty - self.y
-    dx = tx - self.x
-    return (dx*dx)#+dy*dy)
-  def isCollidingTeammate(self, tx, ty): # returns true if it is colliding w/ p
-    r = self.r*2 #agent radius + teammate radius
-    return (r*r > self.getDistTeammate(tx, ty)) # if distance is less than total radius, then colliding.
   
-  def move(self, tx, ty):
+  def getDist2(self, p): # returns distance squared from p
+    dy = p.y - self.y
+    dx = p.x - self.x
+    return (dx*dx+dy*dy)
+  def isColliding(self, p): # returns true if it is colliding w/ p
+    r = self.r+p.r
+    return (r*r > self.getDist2(p)) # if distance is less than total radius, then colliding.
+  def bounce(self, p): # bounce two agents that have collided
+    abx = self.x-p.x
+    aby = self.y-p.y
+    if (abx == 0 and aby*aby <= 2*self.r*self.r): # special cases when p is on top of the agent, exactly alligned
+      self.vy = 0
+      if (self.y > p.y and self.y != p.y + p.r):
+        self.y = p.y + p.r
+    else:
+      abd = math.sqrt(abx*abx+aby*aby)
+      abx /= abd # normalize 
+      aby /= abd #!!!
+      nx = abx # reuse calculation
+      ny = aby
+      abx *= NUDGE
+      aby *= NUDGE
+      while(self.isColliding(p)):
+        self.x += abx
+        self.y += aby
+    # ux = self.vx - p.vx
+    # uy = self.vy - p.vy
+    # un = ux*nx + uy*ny
+    # unx = nx*(un*2.) # added factor of 2
+    # uny = ny*(un*2.) # added factor of 2
+    # ux -= unx
+    # uy -= uny
+    # self.vx = ux + p.vx
+    # self.vy = uy + p.vy
+
+  def move(self):
     self.x += self.vx * TIMESTEP
     self.y += self.vy * TIMESTEP
-    if (self.isCollidingTeammate(tx, ty)):
-      self.x = tx-2*self.r*self.vx
-
+    
   def step(self):
     self.x += self.vx * TIMESTEP
     self.y += self.vy * TIMESTEP
 
-  def update(self, tx, ty):
+  def update(self): 
     self.vy += GRAVITY * TIMESTEP
 
     if (self.y <= REF_U + NUDGE*TIMESTEP):
@@ -439,18 +463,18 @@ class Agent:
 
     self.vx = self.desired_vx*self.dir
 
-    self.move(tx, ty)
+    self.move()
 
     if (self.y <= REF_U):
       self.y = REF_U;
       self.vy = 0;
 
     # stay in their own half:
-    if (self.x*self.dir <= (REF_WALL_WIDTH/2+self.r) ):
+    if (self.x*self.dir <= (REF_WALL_WIDTH/2+self.r) ): # collision with fence
       self.vx = 0;
       self.x = self.dir*(REF_WALL_WIDTH/2+self.r)
 
-    if (self.x*self.dir >= (REF_W/2-self.r) ):
+    if (self.x*self.dir >= (REF_W/2-self.r) ): # collision with wall
       self.vx = 0;
       self.x = self.dir*(REF_W/2-self.r)
 
@@ -623,14 +647,22 @@ class Game:
   def step(self):
     """ main game loop """
     self.betweenGameControl()
-    self.agent1.update(self.agent2.x, self.agent2.y)
-    self.agent2.update(self.agent1.x, self.agent1.y)
-    self.agent3.update(self.agent4.x, self.agent4.y)
-    self.agent4.update(self.agent3.x, self.agent3.y)
-    # self.agent1.update()
-    # self.agent2.update()
-    # self.agent3.update()
-    # self.agent4.update()
+    # Agent 1
+    self.agent1.update()
+    if (self.agent1.isColliding(self.agent2)):
+      self.agent1.bounce(self.agent2)
+    # Agent 2
+    self.agent2.update()
+    if (self.agent2.isColliding(self.agent1)):
+      self.agent2.bounce(self.agent1)
+    # Agent 3
+    self.agent3.update()
+    if (self.agent3.isColliding(self.agent4)):
+      self.agent3.bounce(self.agent4)
+    # Agent 4
+    self.agent4.update()
+    if (self.agent4.isColliding(self.agent3)):
+      self.agent4.bounce(self.agent3)
     
     if self.delayScreen.status():
       self.ball.applyAcceleration(0, GRAVITY)
