@@ -416,27 +416,36 @@ class Agent:
     dy = p.y - self.y
     dx = p.x - self.x
     return (dx*dx+dy*dy)
+
   def isColliding(self, p): # returns true if it is colliding w/ p
     r = self.r+p.r
-    return (r*r > self.getDist2(p)) # if distance is less than total radius, then colliding.
+    if self.x-p.x < self.r:         # approximate
+      return r > self.getDist2(p)
+    return r * r > self.getDist2(p) # if distance is less than total radius, then colliding.
+
+  def isOnTop(self, abx, aby):
+    return abx >= 0 and aby*aby <= 2*self.r*self.r
+
   def bounce(self, p): # bounce two agents that have collided
     abx = self.x-p.x
     aby = self.y-p.y
-    if (abx == 0 and aby*aby <= 2*self.r*self.r): # special cases when p is on top of the agent, exactly alligned
-      self.vy = 0
-      if (self.y > p.y and self.y != p.y + p.r):
+    abd = math.sqrt(abx * abx + aby * aby)
+    abx /= abd  # normalize
+    aby /= abd
+    nx = abx  # reuse calculation
+    ny = aby
+    abx *= NUDGE
+    aby *= NUDGE
+
+    if self.isOnTop(abx, aby):  # special cases when p is on top of the agent, exactly alligned
+      self.vy = 0 # need to change p.y so it reaches 0 quicker
+      if self.y > p.y:
         self.y = p.y + p.r + self.desired_vy
-    else:
-      abd = math.sqrt(abx*abx+aby*aby)
-      abx /= abd # normalize 
-      aby /= abd 
-      nx = abx # reuse calculation
-      ny = aby
-      abx *= NUDGE
-      aby *= NUDGE
-      while(self.isColliding(p)):
-        self.x += abx
-        self.y += aby
+
+    while self.isColliding(p) and not self.isOnTop(abx, aby):
+      self.x += abx
+      self.y += aby
+
     # ux = self.vx - p.vx
     # uy = self.vy - p.vy
     # un = ux*nx + uy*ny

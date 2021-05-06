@@ -2,6 +2,7 @@
 Trying to modify stable_baselines implementation in order to add one more agent
 """
 import time
+import warnings
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import gym
