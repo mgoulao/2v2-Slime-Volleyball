@@ -6,7 +6,7 @@ run: python eval_ppo.py --render
 Evaluate PPO1 policy (MLP input_dim x 64 x 64 x output_dim policy) against built-in AI
 
 """
-
+import os
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='gym')
 
@@ -39,7 +39,7 @@ class OUR_TEAM:
         #self.agent2 = PPO("MlpPolicy", env, verbose=1) # TODO: change state to add agent1's action
 
 if __name__=="__main__":
-    env = SlimeVolleySelfPlayEnv(LOGDIR)
+    env = SlimeVolleySelfPlayEnv(LOGDIR, RENDER_MODE)
     teamPPO = PPO_TEAM("MlpPolicy", env)
     eval_callback = SelfPlayCallback(env,
         best_model_save_path=LOGDIR,
@@ -48,7 +48,6 @@ if __name__=="__main__":
         n_eval_episodes=EVAL_EPISODES,
         deterministic=False)
 
-    teamPPO.learn(10000, callback=eval_callback)
-
+    teamPPO.learn(100000, callback=eval_callback, eval_log_path="./logs")
     
 
