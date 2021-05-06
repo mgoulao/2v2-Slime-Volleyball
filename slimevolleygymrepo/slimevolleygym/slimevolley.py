@@ -667,7 +667,7 @@ class Game:
     if self.delayScreen.status():
       self.ball.applyAcceleration(0, GRAVITY)
       self.ball.limitSpeed(0, MAX_BALL_SPEED)
-      # self.ball.move()
+      self.ball.move()
 
     if (self.ball.isColliding(self.agent1)):
       self.ball.bounce(self.agent1)
@@ -841,7 +841,7 @@ class SlimeVolleyEnv(gym.Env):
       self.observation_space = spaces.Box(low=0, high=255,
         shape=(PIXEL_HEIGHT, PIXEL_WIDTH, 3), dtype=np.uint8)
     else:
-      high = np.array([np.finfo(np.float32).max] * 12)
+      high = np.array([np.finfo(np.float32).max] * 20)
       self.observation_space = spaces.Box(-high, high)
     self.canvas = None
     self.previous_rgbarray = None
@@ -869,8 +869,9 @@ class SlimeVolleyEnv(gym.Env):
       obs = self.render(mode='state')
       self.canvas = obs
     else:
-      obs = self.game.agent1.getObservation()
-    return obs
+      obs1 = self.game.agent1.getObservation()
+      obs2 = self.game.agent2.getObservation()
+    return obs1, obs2
 
   def discreteToBox(self, n):
     # convert discrete action n into the actual triplet action
@@ -907,15 +908,21 @@ class SlimeVolleyEnv(gym.Env):
       if self.action4 is not None:
         action4 = self.discreteToBox(action4)
 
-    if action2 is None: 
-      obs = self.game.agent2.getObservation()
-      action2 = self.policy.predict(obs)
-    if action3 is None: # override baseline policy
-      obs = self.game.agent3.getObservation()
-      action3 = self.policy.predict(obs)
-    if action4 is None: # override baseline policy
-      obs = self.game.agent4.getObservation()
-      action4 = self.policy.predict(obs)
+    if isinstance(self.policy, BaselinePolicy):
+      if action2 is None: 
+        obs = self.game.agent2.getObservation()
+        action2 = self.policy.predict(obs)
+      if action3 is None: # override baseline policy
+        obs = self.game.agent3.getObservation()
+        action3 = self.policy.predict(obs)
+      if action4 is None: # override baseline policy
+        obs = self.game.agent4.getObservation()
+        action4 = self.policy.predict(obs)
+    else:
+      if action3 is None: # override baseline policy
+        obs3 = self.game.agent3.getObservation()
+        obs4 = self.game.agent4.getObservation()
+        action3, action4 = self.policy.predict(obs3, obs4)
 
     self.game.agent3.setAction(action3)
     self.game.agent4.setAction(action4)
@@ -924,7 +931,8 @@ class SlimeVolleyEnv(gym.Env):
 
     reward = self.game.step()
 
-    obs = self.getObs()
+    obs1, obs2 = self.getObs()
+    obs_arr = [obs1, obs2]
 
     if self.t >= self.t_limit:
       done = True
@@ -935,7 +943,7 @@ class SlimeVolleyEnv(gym.Env):
     otherObs = None
     if self.multiagent:
       if self.from_pixels:
-        otherObs = cv2.flip(obs, 1) # horizontal flip
+        otherObs = cv2.flip(obs1, 1) # horizontal flip
       else:
         otherObs = self.game.agent3.getObservation()
 
@@ -948,8 +956,8 @@ class SlimeVolleyEnv(gym.Env):
     }
 
     if self.survival_bonus:
-      return obs, reward+0.01, done, info
-    return obs, reward, done, info
+      return obs_arr, reward+0.01, done, info
+    return obs_arr, reward, done, info
 
   def init_game_state(self):
     self.t = 0

@@ -8,11 +8,7 @@ import slimevolleygym
 from shutil import copyfile
 import numpy as np
 
-from agents_wraps.ppo import PPO_TEAM
-
-
-BEST_THRESHOLD = -1.0 # must achieve a mean score above this to replace prev best self
-
+from agents_wraps.ppo2 import PPO_TEAM
 
 class SlimeVolleySelfPlayEnv(slimevolleygym.SlimeVolleyEnv):
   # wrapper over the normal single player env, but loads the best self play model
@@ -20,66 +16,72 @@ class SlimeVolleySelfPlayEnv(slimevolleygym.SlimeVolleyEnv):
     super(SlimeVolleySelfPlayEnv, self).__init__()
     self.logdir = logdir
     self.policy = self
-    self.best_model = None
-    self.best_model_filename = None
+    self.selfplay_opponent = None
+    self.best_model_filename = "best_model"
     self.renderMode = renderMode
-  def predict(self, obs): # the policy
-    if self.best_model is None:
-      return self.action_space.sample() # return a random action
+
+  def predict(self, obs1, obs2): # the policy
+    if self.selfplay_opponent is None:
+      return self.action_space.sample(), self.action_space.sample() # return a random action
     else:
-      action, _ = self.best_model.predict(obs)
-      return action
+      action1, action2 = self.selfplay_opponent.select_action(obs1, obs2)
+      return action1, action2
+
   def reset(self):
-    # load model if it's there
-    modellist = [f for f in os.listdir(self.logdir) if f.startswith("history")]
-    modellist.sort()
-    if len(modellist) > 0:
-      filename = os.path.join(self.logdir, modellist[-1]) # the latest best model
-      if filename != self.best_model_filename:
-        print("loading model: ", filename)
-        self.best_model_filename = filename
-        if self.best_model is not None:
-          del self.best_model
-        self.best_model = PPO_TEAM.load(filename, env=self)
+    modellist = [f for f in os.listdir(self.logdir) if f.startswith("best_model_")]
+    if len(modellist) > 0 and self.selfplay_opponent is None:
+      print("SELFPLAY: Best Model Found!")
+      self.load_opponent_best_model()
+      
     return super(SlimeVolleySelfPlayEnv, self).reset()
 
-  def step(self, action):
+  def load_opponent_best_model(self):
+    if self.selfplay_opponent is not None:
+      del self.selfplay_opponent
+    self.selfplay_opponent = PPO_TEAM(self, self.logdir)
+    self.selfplay_opponent.load(self.best_model_filename)
+    print("Best Model Loaded!")
+  
+  def step(self, action_1, action_2):
     if self.renderMode:
       self.render()
-    return super(SlimeVolleySelfPlayEnv, self).step(action)
+    return super(SlimeVolleySelfPlayEnv, self).step(action_1, action_2)
+
+  def checkpoint(self):
+    self.load_opponent_best_model()
 
 
-class SelfPlayCallback(EvalCallback):
-  # hacked it to only save new version of best model if beats prev self by BEST_THRESHOLD score
-  # after saving model, resets the best score to be BEST_THRESHOLD
-  def __init__(self, *args, **kwargs):
-    super(SelfPlayCallback, self).__init__(*args, **kwargs)
-    self.best_model_save_path = kwargs.get('best_model_save_path', './logs')
-    self.log_dir = kwargs.get("log_path", './logs')
-    self.best_mean_reward = BEST_THRESHOLD
-    self.generation = 0
+# class SelfPlayCallback(EvalCallback):
+#   # hacked it to only save new version of best model if beats prev self by BEST_THRESHOLD score
+#   # after saving model, resets the best score to be BEST_THRESHOLD
+#   def __init__(self, *args, **kwargs):
+#     super(SelfPlayCallback, self).__init__(*args, **kwargs)
+#     self.best_model_save_path = kwargs.get('best_model_save_path', './logs')
+#     self.log_dir = kwargs.get("log_path", './logs')
+#     self.best_mean_reward = BEST_THRESHOLD
+#     self.generation = 0
     
-  def _on_step(self) -> bool:
-    result = super(SelfPlayCallback, self)._on_step()
+#   def _on_step(self) -> bool:
+#     result = super(SelfPlayCallback, self)._on_step()
 
-    # episode_rewards, episode_lengths = evaluate_policy(
-    #             self.model,
-    #             self.eval_env,
-    #             n_eval_episodes=self.n_eval_episodes,
-    #             render=self.render,
-    #             deterministic=self.deterministic,
-    #             return_episode_rewards=True,
-    #             warn=self.warn,
-    #             callback=self._log_success_callback,
-    #         )
-    # print(np.mean(episode_rewards))
+#     # episode_rewards, episode_lengths = evaluate_policy(
+#     #             self.model,
+#     #             self.eval_env,
+#     #             n_eval_episodes=self.n_eval_episodes,
+#     #             render=self.render,
+#     #             deterministic=self.deterministic,
+#     #             return_episode_rewards=True,
+#     #             warn=self.warn,
+#     #             callback=self._log_success_callback,
+#     #         )
+#     # print(np.mean(episode_rewards))
 
-    if result and self.best_mean_reward > BEST_THRESHOLD:
-      self.generation += 1
-      print("SELFPLAY: mean_reward achieved:", self.best_mean_reward)
-      print("SELFPLAY: new best model, bumping up generation to", self.generation)
-      source_file = os.path.join(self.best_model_save_path, "best_model.zip")
-      backup_file = os.path.join(self.best_model_save_path, "history_"+str(self.generation).zfill(8)+".zip")
-      copyfile(source_file, backup_file)
-      self.best_mean_reward = BEST_THRESHOLD
-    return result
+#     if result and self.best_mean_reward > BEST_THRESHOLD:
+#       self.generation += 1
+#       print("SELFPLAY: mean_reward achieved:", self.best_mean_reward)
+#       print("SELFPLAY: new best model, bumping up generation to", self.generation)
+#       source_file = os.path.join(self.best_model_save_path, "best_model.zip")
+#       backup_file = os.path.join(self.best_model_save_path, "history_"+str(self.generation).zfill(8)+".zip")
+#       copyfile(source_file, backup_file)
+#       self.best_mean_reward = BEST_THRESHOLD
+#     return result

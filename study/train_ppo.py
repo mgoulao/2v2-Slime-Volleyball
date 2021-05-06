@@ -14,8 +14,8 @@ import gym
 import numpy as np
 import argparse
 
-from agents_wraps.ppo import PPO_TEAM
-from selfplay import SelfPlayCallback, SlimeVolleySelfPlayEnv
+from agents_wraps.ppo2 import PPO_TEAM
+from selfplay import SlimeVolleySelfPlayEnv
 
 SEED = 17
 NUM_TIMESTEPS = int(1e9)
@@ -36,18 +36,19 @@ class OUR_TEAM:
     def __init__(self, env):
         pass
         #self.agent1 = PPO("MlpPolicy", env, verbose=1)
-        #self.agent2 = PPO("MlpPolicy", env, verbose=1) # TODO: change state to add agent1's action
+        #self.agent2 = PPO("MlpPolicy", env, verbose=1)
 
 if __name__=="__main__":
     env = SlimeVolleySelfPlayEnv(LOGDIR, RENDER_MODE)
-    teamPPO = PPO_TEAM("MlpPolicy", env)
-    eval_callback = SelfPlayCallback(env,
-        best_model_save_path=LOGDIR,
-        log_path=LOGDIR,
-        eval_freq=EVAL_FREQ,
-        n_eval_episodes=EVAL_EPISODES,
-        deterministic=False)
+    teamPPO = PPO_TEAM(env, LOGDIR)
+    # eval_callback = SelfPlayCallback(env,
+    #     best_model_save_path=LOGDIR,
+    #     log_path=LOGDIR,
+    #     eval_freq=EVAL_FREQ,
+    #     n_eval_episodes=EVAL_EPISODES,
+    #     deterministic=False)
+    teamPPO.loadBestModel()
 
-    teamPPO.learn(100000, callback=eval_callback, eval_log_path="./logs")
+    teamPPO.train(100000)
     
 
