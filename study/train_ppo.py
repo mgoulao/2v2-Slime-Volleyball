@@ -1,9 +1,9 @@
 """
-Simple evaluation example.
+Train PPO using Selfplay
 
-run: python eval_ppo.py --render
+run: python train_ppo.py --render
 
-Evaluate PPO1 policy (MLP input_dim x 64 x 64 x output_dim policy) against built-in AI
+Train a PPO policy using Selfplay (starts against a Baseline)
 
 """
 import os
@@ -17,13 +17,8 @@ import argparse
 from agents_wraps.ppo2 import PPO_TEAM
 from selfplay import SlimeVolleySelfPlayEnv
 
-SEED = 17
-NUM_TIMESTEPS = int(1e9)
-EVAL_FREQ = int(1e5)
-EVAL_EPISODES = int(1e2)
-
 RENDER_MODE = False
-SELFPLAY = False
+SELFPLAY = True
 
 LOGDIR = "./ppo_logs"
 
@@ -40,19 +35,22 @@ class OUR_TEAM:
         #self.agent2 = PPO("MlpPolicy", env, verbose=1)
 
 if __name__=="__main__":
+
+    parser = argparse.ArgumentParser(description='Train PPO.')
+    parser.add_argument('--render', action='store_true', help='Enable environment render', default=False)
+    parser.add_argument('--noselfplay', action='store_true', help='Disable selfplay', default=False)
+    args = parser.parse_args()
+
+    RENDER_MODE = args.render
+    SELFPLAY = not args.noselfplay
+
     if not os.path.exists(LOGDIR):
         os.makedirs(LOGDIR)
-        
+
     env = SlimeVolleySelfPlayEnv(LOGDIR, RENDER_MODE, SELFPLAY)
     teamPPO = PPO_TEAM(env, LOGDIR)
-    # eval_callback = SelfPlayCallback(env,
-    #     best_model_save_path=LOGDIR,
-    #     log_path=LOGDIR,
-    #     eval_freq=EVAL_FREQ,
-    #     n_eval_episodes=EVAL_EPISODES,
-    #     deterministic=False)
     teamPPO.loadBestModel()
 
-    teamPPO.train(100000000)
+    teamPPO.train(int(10e7))
     
 

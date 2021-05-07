@@ -285,7 +285,7 @@ class PPO_TEAM:
 
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.shape[0]
-        K_epochs = 80
+        K_epochs = 1024
         eps_clip = 0.2
         gamma = 0.99
         lr_actor = 0.0003
@@ -323,9 +323,9 @@ class PPO_TEAM:
 
             state_1, state_2 = self.env.reset()
             current_ep_reward = 0
-
-            for t in range(1, max_ep_len+1):
-
+            done = False
+            t = 1
+            while not done:
                 # select action with policy
                 action_1, action_2 = self.select_action(state_1, state_2)
                 state_arr, reward, done, _ = self.env.step(action_1, action_2)
@@ -379,6 +379,8 @@ class PPO_TEAM:
                 # break; if the episode is over
                 if done:
                     break
+                    
+                t += 1
 
             print_running_reward += current_ep_reward
             print_running_episodes += 1
