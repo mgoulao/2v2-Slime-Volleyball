@@ -4,11 +4,11 @@ import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
 from torch.distributions import Categorical
+from torch.utils.tensorboard import SummaryWriter
+
 import numpy as np
 
 import os
-
-BEST_THRESHOLD = 0.01
 
 ################################## set device ##################################
 
@@ -292,15 +292,15 @@ class PPO_TEAM:
         lr_critic = 0.001 
         self.agent1 = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
         self.agent2 = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
+        self.writer  = SummaryWriter('logs/ppo_1')
 
     def select_action(self, state1, state2):
         return self.agent1.select_action(state1), self.agent2.select_action(state2)
 
     def train(self, total_timesteps):
         # logging file
-        log_f = open(f'{self.logdir}/train',"w+")
-        log_f.write('episode,timestep,reward\n')
-
+        # log_f = open(f'{self.logdir}/train',"w+")
+        # log_f.write('episode,timestep,reward\n')
 
         # printing and logging variables
         print_running_reward = 0
@@ -315,8 +315,8 @@ class PPO_TEAM:
         max_ep_len = 1000
         update_timestep = max_ep_len * 4 
         log_freq = max_ep_len * 2
-        print_freq = max_ep_len * 10
-        checkpoint_model_freq = max_ep_len
+        print_freq = total_timesteps / 10
+        checkpoint_model_freq = max_ep_len * 10
 
         # training loop
         while time_step < total_timesteps:
@@ -353,8 +353,10 @@ class PPO_TEAM:
                     log_avg_reward = log_running_reward / log_running_episodes
                     log_avg_reward = round(log_avg_reward, 4)
 
-                    log_f.write('{},{},{}\n'.format(i_episode, time_step, log_avg_reward))
-                    log_f.flush()
+                    # log_f.write('{},{},{}\n'.format(i_episode, time_step, log_avg_reward))
+                    # log_f.flush()
+
+                    self.writer.add_scalar('training reward', log_avg_reward, time_step)
 
                     log_running_reward = 0
                     log_running_episodes = 0
@@ -366,14 +368,14 @@ class PPO_TEAM:
                     print_avg_reward = print_running_reward / print_running_episodes
                     print_avg_reward = round(print_avg_reward, 2)
 
-                    print("Episode : {} \t\t Timestep : {} \t\t Average Reward : {}".format(i_episode, time_step, print_avg_reward))
+                    print("{}\% - Episode : {} \t\t Timestep : {} \t\t Average Reward : {}".format((time_step/total_timesteps)*100, i_episode, time_step, print_avg_reward))
 
                     print_running_reward = 0
                     print_running_episodes = 0
 
                 # save model weights
                 if time_step % checkpoint_model_freq == 0:
-                    self.checkpoint(current_ep_reward/t)
+                    self.env.checkpoint(self, current_ep_reward/t)
                 # break; if the episode is over
                 if done:
                     break
@@ -387,18 +389,9 @@ class PPO_TEAM:
             i_episode += 1
 
 
-        log_f.close()
+        # log_f.close()
         self.env.close()
-    
-    def checkpoint(self, mean_reward):
-        print("Evaluate Checkpoint: ", mean_reward)
-        if mean_reward > BEST_THRESHOLD:
-            print("--------------------------------------------------------------------------------------------")
-            print("SELFPLAY: mean_reward achieved:", mean_reward)
-            self.save("best_model")
-            self.env.checkpoint()
-            print("--------------------------------------------------------------------------------------------")
-    
+       
     def loadBestModel(self):
         modellist = [f for f in os.listdir(self.logdir) if f.startswith("best_model_")]
         if len(modellist) > 0:

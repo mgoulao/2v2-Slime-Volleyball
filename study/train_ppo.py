@@ -23,6 +23,7 @@ EVAL_FREQ = int(1e5)
 EVAL_EPISODES = int(1e2)
 
 RENDER_MODE = False
+SELFPLAY = False
 
 LOGDIR = "./ppo_logs"
 
@@ -39,7 +40,7 @@ class OUR_TEAM:
         #self.agent2 = PPO("MlpPolicy", env, verbose=1)
 
 if __name__=="__main__":
-    env = SlimeVolleySelfPlayEnv(LOGDIR, RENDER_MODE)
+    env = SlimeVolleySelfPlayEnv(LOGDIR, RENDER_MODE, SELFPLAY)
     teamPPO = PPO_TEAM(env, LOGDIR)
     # eval_callback = SelfPlayCallback(env,
     #     best_model_save_path=LOGDIR,
@@ -49,6 +50,6 @@ if __name__=="__main__":
     #     deterministic=False)
     teamPPO.loadBestModel()
 
-    teamPPO.train(100000)
+    teamPPO.train(100000000)
     
 

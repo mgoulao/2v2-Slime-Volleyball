@@ -10,12 +10,14 @@ import numpy as np
 
 from agents_wraps.ppo2 import PPO_TEAM
 
+BEST_THRESHOLD = 0.5
+
 class SlimeVolleySelfPlayEnv(slimevolleygym.SlimeVolleyEnv):
   # wrapper over the normal single player env, but loads the best self play model
-  def __init__(self, logdir, renderMode):
+  def __init__(self, logdir, renderMode, selfplay):
     super(SlimeVolleySelfPlayEnv, self).__init__()
     self.logdir = logdir
-    self.policy = self
+    self.selfplay = selfplay
     self.selfplay_opponent = None
     self.best_model_filename = "best_model"
     self.renderMode = renderMode
@@ -28,14 +30,15 @@ class SlimeVolleySelfPlayEnv(slimevolleygym.SlimeVolleyEnv):
       return action1, action2
 
   def reset(self):
-    modellist = [f for f in os.listdir(self.logdir) if f.startswith("best_model_")]
-    if len(modellist) > 0 and self.selfplay_opponent is None:
-      print("SELFPLAY: Best Model Found!")
-      self.load_opponent_best_model()
+    # modellist = [f for f in os.listdir(self.logdir) if f.startswith("best_model_")]
+    # if len(modellist) > 0 and self.selfplay_opponent is None and self.selfplay:
+    #   print("SELFPLAY: Best Model Found!")
+    #   self.load_opponent_best_model()
       
     return super(SlimeVolleySelfPlayEnv, self).reset()
 
   def load_opponent_best_model(self):
+    self.policy = self
     if self.selfplay_opponent is not None:
       del self.selfplay_opponent
     self.selfplay_opponent = PPO_TEAM(self, self.logdir)
@@ -47,8 +50,14 @@ class SlimeVolleySelfPlayEnv(slimevolleygym.SlimeVolleyEnv):
       self.render()
     return super(SlimeVolleySelfPlayEnv, self).step(action_1, action_2)
 
-  def checkpoint(self):
-    self.load_opponent_best_model()
+  def checkpoint(self, agent, mean_reward):
+    #print("Evaluate Checkpoint: ", mean_reward)
+    if mean_reward > BEST_THRESHOLD and self.selfplay:
+      print("--------------------------------------------------------------------------------------------")
+      print("SELFPLAY: mean_reward achieved:", mean_reward)
+      agent.save("best_model")
+      self.load_opponent_best_model()
+      print("--------------------------------------------------------------------------------------------")
 
 
 # class SelfPlayCallback(EvalCallback):
