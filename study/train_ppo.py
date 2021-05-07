@@ -40,6 +40,9 @@ class OUR_TEAM:
         #self.agent2 = PPO("MlpPolicy", env, verbose=1)
 
 if __name__=="__main__":
+    if not os.path.exists(LOGDIR):
+        os.makedirs(LOGDIR)
+        
     env = SlimeVolleySelfPlayEnv(LOGDIR, RENDER_MODE, SELFPLAY)
     teamPPO = PPO_TEAM(env, LOGDIR)
     # eval_callback = SelfPlayCallback(env,
