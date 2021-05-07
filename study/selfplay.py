@@ -2,10 +2,8 @@ import sys
 sys.path.append('../slimevolleygymrepo')
 
 import os
-from stable_baselines3.common.callbacks import EvalCallback
-from stable_baselines3.common.evaluation import evaluate_policy
+
 import slimevolleygym 
-from shutil import copyfile
 import numpy as np
 
 from agents_wraps.ppo2 import PPO_TEAM
