@@ -3,7 +3,7 @@ Train PPO using Selfplay
 
 run: python train_ppo.py --render
 
-Train a PPO policy using Selfplay (starts against a Baseline)
+Train a PPO policy using Selfplay
 
 """
 import os
@@ -51,6 +51,6 @@ if __name__=="__main__":
     teamPPO = PPO_TEAM(env, LOGDIR)
     teamPPO.loadBestModel()
 
-    teamPPO.train(int(10e7))
+    teamPPO.train(int(1e7))
     
 
