@@ -279,8 +279,12 @@ class PPO:
     
 class PPO_TEAM:
 
-    def __init__(self, env, logdir):
+    def __init__(self, env, logdir="./ppo_save"):
         self.logdir = logdir
+        
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
+
         self.env = env
 
         state_dim = env.observation_space.shape[0]
@@ -297,11 +301,10 @@ class PPO_TEAM:
     def select_action(self, state1, state2):
         return self.agent1.select_action(state1), self.agent2.select_action(state2)
 
-    def train(self, total_timesteps):
-        # logging file
-        # log_f = open(f'{self.logdir}/train',"w+")
-        # log_f.write('episode,timestep,reward\n')
+    def predict(self, state1, state2):
+        return self.select_action(state1, state2)
 
+    def train(self, total_timesteps):
         # printing and logging variables
         print_running_reward = 0
         print_running_episodes = 0

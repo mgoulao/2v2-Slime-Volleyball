@@ -909,9 +909,7 @@ class SlimeVolleyEnv(gym.Env):
         action4 = self.discreteToBox(action4)
 
     if isinstance(self.policy, BaselinePolicy):
-      # if action2 is None: 
-      #   obs = self.game.agent2.getObservation()
-      #   action2 = self.policy.predict(obs)
+
       if action3 is None: # override baseline policy
         obs = self.game.agent3.getObservation()
         action3 = self.policy.predict(obs)
