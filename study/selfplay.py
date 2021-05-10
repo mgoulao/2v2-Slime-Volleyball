@@ -20,12 +20,13 @@ class SlimeVolleySelfPlayEnv(slimevolleygym.SlimeVolleyEnv):
     self.best_model_filename = "best_model"
     self.renderMode = renderMode
 
-  def predict(self, obs1, obs2): # the policy
+  def predict(self, obs1): #, obs2): # the policy
     if self.selfplay_opponent is None:
       return self.action_space.sample(), self.action_space.sample() # return a random action
     else:
-      action1, action2 = self.selfplay_opponent.select_action(obs1, obs2)
-      return action1, action2
+      #action1, action2 = self.selfplay_opponent.select_action(obs1, obs2)
+      action1 = self.selfplay_opponent.select_action(obs1)
+      return action1#, action2
 
   def reset(self):
     # modellist = [f for f in os.listdir(self.logdir) if f.startswith("best_model_")]
@@ -43,10 +44,10 @@ class SlimeVolleySelfPlayEnv(slimevolleygym.SlimeVolleyEnv):
     self.selfplay_opponent.load(self.best_model_filename)
     print("Best Model Loaded!")
   
-  def step(self, action_1, action_2):
+  def step(self, action_1):#, action_2):
     if self.renderMode:
       self.render()
-    return super(SlimeVolleySelfPlayEnv, self).step(action_1, action_2)
+    return super(SlimeVolleySelfPlayEnv, self).step(action_1)#, action_2)
 
   def checkpoint(self, agent, mean_reward):
     #print("Evaluate Checkpoint: ", mean_reward)

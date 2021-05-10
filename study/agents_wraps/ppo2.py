@@ -291,11 +291,11 @@ class PPO_TEAM:
         lr_actor = 0.0003
         lr_critic = 0.001 
         self.agent1 = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
-        self.agent2 = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
+        #self.agent2 = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
         self.writer  = SummaryWriter('logs/ppo_1')
 
     def select_action(self, state1, state2):
-        return self.agent1.select_action(state1), self.agent2.select_action(state2)
+        return self.agent1.select_action(state1)#, self.agent2.select_action(state2)
 
     def train(self, total_timesteps):
         # logging file
@@ -321,16 +321,17 @@ class PPO_TEAM:
         # training loop
         while time_step < total_timesteps:
 
-            state_1, state_2 = self.env.reset()
+            state_1 = self.env.reset()
             current_ep_reward = 0
             done = False
+            t = 1
             while not done:
                 # select action with policy
                 #action_1, action_2 = self.select_action(state_1, state_2)
                 action_1 = self.agent1.select_action(state_1)
-                state_arr, reward, done, _ = self.env.step(action_1, np.array([0,0,0]))
-                state_1 = state_arr[0]
-                state_2 = state_arr[1]
+                state_1, reward, done, _ = self.env.step(action_1)#, np.array([0,0,0]))
+                #state_1 = state_arr[0]
+                #state_2 = state_arr[1]
 
                 # saving reward and is_terminals
                 self.agent1.buffer.rewards.append(reward)
@@ -379,6 +380,8 @@ class PPO_TEAM:
                 # break; if the episode is over
                 if done:
                     break
+
+                t += 1
                     
             print_running_reward += current_ep_reward
             print_running_episodes += 1
@@ -400,8 +403,8 @@ class PPO_TEAM:
 
     def save(self, filename):
         self.agent1.save(f'{self.logdir}/{filename}_agent1')
-        self.agent2.save(f'{self.logdir}/{filename}_agent2')
+        #self.agent2.save(f'{self.logdir}/{filename}_agent2')
 
     def load(self, filename):
         self.agent1.load(f'{self.logdir}/{filename}_agent1')
-        self.agent2.load(f'{self.logdir}/{filename}_agent2')
+        #self.agent2.load(f'{self.logdir}/{filename}_agent2')
