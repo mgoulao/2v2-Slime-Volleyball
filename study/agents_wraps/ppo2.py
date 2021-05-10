@@ -285,7 +285,7 @@ class PPO_TEAM:
 
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.shape[0]
-        K_epochs = 1024
+        K_epochs = 10
         eps_clip = 0.2
         gamma = 0.99
         lr_actor = 0.0003
@@ -313,10 +313,10 @@ class PPO_TEAM:
         i_episode = 0
 
         max_ep_len = 1000
-        update_timestep = max_ep_len * 4 
-        log_freq = max_ep_len * 2
+        update_timestep = 4096 
+        log_freq = total_timesteps / 100 
         print_freq = total_timesteps / 10
-        checkpoint_model_freq = max_ep_len * 10
+        checkpoint_model_freq = 1000
 
         # training loop
         while time_step < total_timesteps:
@@ -324,10 +324,10 @@ class PPO_TEAM:
             state_1, state_2 = self.env.reset()
             current_ep_reward = 0
             done = False
-            t = 1
             while not done:
                 # select action with policy
-                action_1, action_2 = self.select_action(state_1, state_2)
+                #action_1, action_2 = self.select_action(state_1, state_2)
+                action_1 = self.agent1.select_action(state_1)
                 state_arr, reward, done, _ = self.env.step(action_1, np.array([0,0,0]))
                 state_1 = state_arr[0]
                 state_2 = state_arr[1]
@@ -335,8 +335,8 @@ class PPO_TEAM:
                 # saving reward and is_terminals
                 self.agent1.buffer.rewards.append(reward)
                 self.agent1.buffer.is_terminals.append(done)
-                self.agent2.buffer.rewards.append(reward)
-                self.agent2.buffer.is_terminals.append(done)
+                #self.agent2.buffer.rewards.append(reward)
+                #self.agent2.buffer.is_terminals.append(done)
 
                 time_step +=1
                 current_ep_reward += reward
@@ -344,7 +344,7 @@ class PPO_TEAM:
                 # update PPO agent
                 if time_step % update_timestep == 0:
                     self.agent1.update()
-                    self.agent2.update()
+                    #self.agent2.update()
 
                 # log in logging file
                 if time_step % log_freq == 0:
@@ -380,8 +380,6 @@ class PPO_TEAM:
                 if done:
                     break
                     
-                t += 1
-
             print_running_reward += current_ep_reward
             print_running_episodes += 1
 
