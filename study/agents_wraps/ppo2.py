@@ -1,5 +1,7 @@
 # From https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO.py
 
+import math
+
 import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
@@ -143,10 +145,12 @@ class ActorCritic(nn.Module):
 
 
 class PPO:
-    def __init__(self, state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std_init=0.6):
+    def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std_init=0.6):
 
         self.has_continuous_action_space = has_continuous_action_space
-        self.action_dim = action_dim
+        self.action_space = action_space
+        self.action_dim = 2**action_space  # we want all the possible combinations of actions 
+
         if has_continuous_action_space:
             self.action_std = action_std_init
 
@@ -156,13 +160,13 @@ class PPO:
         
         self.buffer = RolloutBuffer()
 
-        self.policy = ActorCritic(state_dim, action_dim, has_continuous_action_space, action_std_init).to(device)
+        self.policy = ActorCritic(state_dim, self.action_dim, has_continuous_action_space, action_std_init).to(device)
         self.optimizer = torch.optim.Adam([
                         {'params': self.policy.actor.parameters(), 'lr': lr_actor},
                         {'params': self.policy.critic.parameters(), 'lr': lr_critic}
                     ])
 
-        self.policy_old = ActorCritic(state_dim, action_dim, has_continuous_action_space, action_std_init).to(device)
+        self.policy_old = ActorCritic(state_dim, self.action_dim, has_continuous_action_space, action_std_init).to(device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
@@ -211,12 +215,16 @@ class PPO:
         return self.convert_action(action.item())
 
     def convert_action(self, action):
-        action_arr = np.zeros(self.action_dim)
-        action_arr[action] = 1
-        return action_arr
+        action = int(bin(action)[2:])
+        env_action = np.zeros(self.action_space)
+        i = 0
+        while action:
+            env_action[-1-i] = action % 10
+            action = action//10
+            i += 1
+        return env_action
 
     def update(self):
-
         # Monte Carlo estimate of returns
         rewards = []
         discounted_reward = 0
@@ -284,14 +292,14 @@ class PPO_TEAM:
         self.env = env
 
         state_dim = env.observation_space.shape[0]
-        action_dim = env.action_space.shape[0]
+        action_space = env.action_space.shape[0] 
         K_epochs = 10
         eps_clip = 0.2
         gamma = 0.99
         lr_actor = 0.0003
         lr_critic = 0.001 
-        self.agent1 = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
-        #self.agent2 = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
+        self.agent1 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
+        #self.agent2 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
         self.writer  = SummaryWriter('logs/ppo_1')
 
     def select_action(self, state1, state2):
