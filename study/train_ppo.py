@@ -6,12 +6,9 @@ run: python train_ppo.py
 Train a PPO policy using Selfplay
 
 """
-import os
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='gym')
 
-import gym
-import numpy as np
 import argparse
 
 from agents_wraps.ppo2 import PPO_TEAM

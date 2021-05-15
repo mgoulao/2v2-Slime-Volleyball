@@ -65,7 +65,7 @@ def rollout(env, policy_1, policy_2, render_mode=False):
   while not done:
 
     action_1, action_2 = policy_1.predict(obs_1, obs_2)
-    obs_arr, reward, done, info = env.step(action, action1)
+    obs_arr, reward, done, info = env.step(action_1, action_2)
     obs_1 = obs_arr[0]
     obs_2 = obs_arr[1]
 
