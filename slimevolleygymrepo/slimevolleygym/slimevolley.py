@@ -22,6 +22,8 @@ import numpy as np
 import cv2 # installed with gym anyways
 from collections import deque
 
+from roles import Attacker, Defender, Vanilla
+
 np.set_printoptions(threshold=20, precision=3, suppress=True, linewidth=200)
 
 # game settings:
@@ -377,7 +379,7 @@ class RelativeState:
 
 class Agent:
   """ keeps track of the agent in the game. note this is not the policy network """
-  def __init__(self, dir, x, y, c):
+  def __init__(self, dir, x, y, c, role):
     self.dir = dir # -1 means left, 1 means right player for symmetry.
     self.x = x
     self.y = y
@@ -388,8 +390,10 @@ class Agent:
     self.desired_vx = 0
     self.desired_vy = 0
     self.state = RelativeState()
-    self.emotion = "happy"; # hehe...
+    self.emotion = "happy" # hehe...
     self.life = MAXLIVES
+    self.role = role
+
   def lives(self):
     return self.life
     
@@ -514,6 +518,7 @@ class Agent:
     self.state.o2y = opponent2.y
     self.state.o2vx = opponent2.vx*(-self.dir)
     self.state.o2vy = opponent2.vy
+
   def getObservation(self):
     return self.state.getObservation()
 
@@ -629,6 +634,7 @@ class Game:
     self.delayScreen = None
     self.np_random = np_random
     self.reset()
+
   def reset(self):
     self.ground = Wall(0, 0.75, REF_W, REF_U, c=GROUND_COLOR)
     self.fence = Wall(0, 0.75 + REF_WALL_HEIGHT/2, REF_WALL_WIDTH, (REF_WALL_HEIGHT-1.5), c=FENCE_COLOR)
@@ -636,10 +642,10 @@ class Game:
     ball_vx = self.np_random.uniform(low=-20, high=20)
     ball_vy = self.np_random.uniform(low=10, high=25)
     self.ball = Particle(0, REF_W/4, ball_vx, ball_vy, 0.5, c=BALL_COLOR)
-    self.agent1 = Agent(1, REF_W/6, 1.5, c=AGENT1_COLOR)
-    self.agent2 = Agent(1, REF_W/3, 1.5, c=AGENT2_COLOR)
-    self.agent3 = Agent(-1, -REF_W/6, 1.5, c=AGENT3_COLOR)
-    self.agent4 = Agent(-1, -REF_W/3, 1.5, c=AGENT4_COLOR)
+    self.agent1 = Agent(1, REF_W / 6, 1.5, c=AGENT1_COLOR, role=Attacker())
+    self.agent2 = Agent(1, REF_W/3, 1.5, c=AGENT2_COLOR, role=Defender())
+    self.agent3 = Agent(-1, -REF_W/6, 1.5, c=AGENT3_COLOR, role=Vanilla())
+    self.agent4 = Agent(-1, -REF_W/3, 1.5, c=AGENT4_COLOR, role=Vanilla())
     self.agent1.updateState(self.agent2, self.ball, self.agent3, self.agent4)
     self.agent2.updateState(self.agent1, self.ball, self.agent3, self.agent4)
     self.agent3.updateState(self.agent4, self.ball, self.agent1, self.agent2)
@@ -689,7 +695,7 @@ class Game:
     if (self.ball.isColliding(self.fenceStub)):
       self.ball.bounce(self.fenceStub)
 
-    # negated, since we want reward to be from the persepctive of right agent being trained.
+    # negated, since we want reward to be from the perspective of right agent being trained.
     result = -self.ball.checkEdges()
 
     if (result != 0):
