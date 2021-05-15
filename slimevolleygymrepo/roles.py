@@ -141,7 +141,7 @@ class Attacker(AD):
         ball = args[1]
         info = args[2]
 
-        if self.info(agent, ball) <= info:
+        if self.info(agent, ball) >= info:
             self.switch(agent)
 
 
@@ -197,5 +197,5 @@ class Defender(AD):
         ball = args[1]
         info = args[2]
 
-        if self.info(agent, ball) >= info:
+        if self.info(agent, ball) <= info:
             self.switch(agent)
