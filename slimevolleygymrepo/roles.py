@@ -111,10 +111,10 @@ class Attacker(AD):
         bny = args[7]
         # ppo reward
         reward = args[8]
-        # teammates past state
+        # teammates previous state
         tpx = args[9]
         tpy = args[10]
-        # teammates past state
+        # teammates next state
         tnx = args[11]
         tny = args[12]
 
@@ -148,7 +148,7 @@ class Attacker(AD):
         ball = args[1]
         info = args[2]
 
-        if self.info(agent, ball) >= info:
+        if self.info(agent, ball) > info:
             self.switch(agent)
 
 
@@ -174,7 +174,7 @@ class Defender(AD):
         bny = args[7]
         # ppo reward
         reward = args[8]
-        # teammates next state
+        # teammates previous state
         tpx = args[9]
         tpy = args[10]
         # teammates next state
