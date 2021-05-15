@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABC
 from math import sqrt
-from slimevolleygym.slimevolley import REF_W
+from game_settings import REF_W
 
 class Role(ABC):
     @abstractmethod
