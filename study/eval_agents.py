@@ -108,16 +108,22 @@ if __name__=="__main__":
     
     right_agent_choice = args.right
     left_agent_choice = args.left
+
+    assert check_choice(args.right), "Please enter a valid agent"
+    assert check_choice(args.left), "Please enter a valid agent"
     
     env = SlimeVolleyEvalEnv(render_mode)
 
     policy_1 = MODEL[right_agent_choice](env) # the right agent
     policy_2 = MODEL[left_agent_choice](env) # the left agent
 
-    env.set_opponent(policy_2)
+    if not right_agent_choice == "baseline":
+        policy_1.loadBestModel()
 
-    assert check_choice(args.right), "Please enter a valid agent"
-    assert check_choice(args.left), "Please enter a valid agent"
+    if not left_agent_choice == "baseline":
+        policy_2.loadBestModel()
+
+    env.set_opponent(policy_2)
 
     history = evaluate_multiagent(env, policy_1, policy_2)
 

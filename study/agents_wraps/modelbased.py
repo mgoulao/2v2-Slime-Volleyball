@@ -1,6 +1,6 @@
 # From https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO.py
 
-from agents_wraps.baseppo import BaseTeam
+import math
 
 import torch
 import torch.nn as nn
@@ -33,6 +33,17 @@ print("=========================================================================
 
 ################################## PPO Policy ##################################
 
+class ModelBuffer:
+    def __init__(self):
+        self.state_stack = []
+        self.next_state = []
+
+    def clear(self):
+        del self.state_stack[:]
+        del self.next_state[:]
+
+    def sample():
+        pass
 
 class RolloutBuffer:
     def __init__(self):
@@ -42,7 +53,6 @@ class RolloutBuffer:
         self.rewards = []
         self.is_terminals = []
 
-
     def clear(self):
         del self.actions[:]
         del self.states[:]
@@ -51,35 +61,46 @@ class RolloutBuffer:
         del self.is_terminals[:]
 
 
+class Model(nn.Module):
+    def __init__(self, state_dim, action_dim):
+        super(ActorCritic, self).__init__()
+        # I get two prev states and one action, you get a next state and reward
+        self.lr = 0.01
+        self.model = nn.Sequential(
+                        nn.Linear(state_dim*2 + action_dim, 64),
+                        nn.Tanh(),
+                        nn.Linear(64, 64),
+                        nn.Tanh(),
+                        nn.Linear(64, state_dim + 1)
+                    )
+
+        self.criterion = nn.MSELoss()
+        self.optimizer = torch.optim.SGD(self.parameters(), lr=self.lr)
+        
+
+    def forward(self, x):
+        return self.model(x)
+
+    def update(self, y_, y):
+        self.zero_grad()
+
+        loss = self.criterion(y_, y)
+        loss.backward()
+        self.optimizer.step()
+
+
 class ActorCritic(nn.Module):
-    def __init__(self, state_dim, action_dim, has_continuous_action_space, action_std_init):
+    def __init__(self, state_dim, action_dim):
         super(ActorCritic, self).__init__()
 
-        self.has_continuous_action_space = has_continuous_action_space
-
-        if has_continuous_action_space:
-            self.action_dim = action_dim
-            self.action_var = torch.full((action_dim,), action_std_init * action_std_init).to(device)
-
-        # actor
-        if has_continuous_action_space :
-            self.actor = nn.Sequential(
-                            nn.Linear(state_dim, 64),
-                            nn.Tanh(),
-                            nn.Linear(64, 64),
-                            nn.Tanh(),
-                            nn.Linear(64, action_dim),
-                            nn.Tanh()
-                        )
-        else:
-            self.actor = nn.Sequential(
-                            nn.Linear(state_dim, 64),
-                            nn.Tanh(),
-                            nn.Linear(64, 64),
-                            nn.Tanh(),
-                            nn.Linear(64, action_dim),
-                            nn.Softmax(dim=-1)
-                        )
+        self.actor = nn.Sequential(
+                        nn.Linear(state_dim, 64),
+                        nn.Tanh(),
+                        nn.Linear(64, 64),
+                        nn.Tanh(),
+                        nn.Linear(64, action_dim),
+                        nn.Softmax(dim=-1)
+                    )
 
         
         # critic
@@ -90,29 +111,15 @@ class ActorCritic(nn.Module):
                         nn.Tanh(),
                         nn.Linear(64, 1)
                     )
-        
-    def set_action_std(self, new_action_std):
-
-        if self.has_continuous_action_space:
-            self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(device)
-        else:
-            print("--------------------------------------------------------------------------------------------")
-            print("WARNING : Calling ActorCritic::set_action_std() on discrete action space policy")
-            print("--------------------------------------------------------------------------------------------")
-
 
     def forward(self):
         raise NotImplementedError
 
 
     def act(self, state):
-        if self.has_continuous_action_space:
-            action_mean = self.actor(state)
-            cov_mat = torch.diag(self.action_var).unsqueeze(dim=0)
-            dist = MultivariateNormal(action_mean, cov_mat)
-        else:
-            action_probs = self.actor(state)
-            dist = Categorical(action_probs)
+
+        action_probs = self.actor(state)
+        dist = Categorical(action_probs)
 
         action = dist.sample()
         action_logprob = dist.log_prob(action)
@@ -121,21 +128,8 @@ class ActorCritic(nn.Module):
 
 
     def evaluate(self, state, action):
-
-        if self.has_continuous_action_space:
-            action_mean = self.actor(state)
-            
-            action_var = self.action_var.expand_as(action_mean)
-            cov_mat = torch.diag_embed(action_var).to(device)
-            dist = MultivariateNormal(action_mean, cov_mat)
-            
-            # For Single Action Environments.
-            if self.action_dim == 1:
-                action = action.reshape(-1, self.action_dim)
-
-        else:
-            action_probs = self.actor(state)
-            dist = Categorical(action_probs)
+        action_probs = self.actor(state)
+        dist = Categorical(action_probs)
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
         state_values = self.critic(state)
@@ -144,13 +138,11 @@ class ActorCritic(nn.Module):
 
 
 class PPO:
-    def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std_init=0.6):
+    def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip):
 
-        self.has_continuous_action_space = has_continuous_action_space
+        self.state_dim = state_dim
         self.action_space = action_space
         self.action_dim = 2**action_space  # we want all the possible combinations of actions
-        if has_continuous_action_space:
-            self.action_std = action_std_init
 
         self.gamma = gamma
         self.eps_clip = eps_clip
@@ -158,26 +150,43 @@ class PPO:
         
         self.buffer = RolloutBuffer()
 
-        self.policy = ActorCritic(state_dim, self.action_dim, has_continuous_action_space, action_std_init).to(device)
+        self.policy = ActorCritic(state_dim, self.action_dim).to(device)
         self.optimizer = torch.optim.Adam([
                         {'params': self.policy.actor.parameters(), 'lr': lr_actor},
                         {'params': self.policy.critic.parameters(), 'lr': lr_critic}
                     ])
 
-        self.policy_old = ActorCritic(state_dim, self.action_dim, has_continuous_action_space, action_std_init).to(device)
+        self.policy_old = ActorCritic(state_dim, self.action_dim).to(device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
 
-    def select_action(self, state):
+        self.model_buffer = ModelBuffer()
+        self.model = Model(state_dim)
+
+        self.prev_states = []
+
+    def select_action(self, state, env=True):
         with torch.no_grad():
             state = torch.FloatTensor(state).to(device)
             action, action_logprob = self.policy_old.act(state)
         
+        if env:
+            if len(self.prev_state) == 2:
+                self.model_buffer.state_stack.append(torch.stack(self.prev_states))
+                self.model_buffer.next_state.append(torch.stack(state))
+                self.prev_states = self.prev_states[1:]
+
+            self.prev_states.append(state)
+
         self.buffer.states.append(state)
         self.buffer.actions.append(action)
         self.buffer.logprobs.append(action_logprob)
-        return self.convert_action(action.item())
+
+        if env:
+            return self.convert_action(action.item())
+        else:
+            return action.item()
 
     def convert_action(self, action):
         action = int(bin(action)[2:])
@@ -188,6 +197,27 @@ class PPO:
             action = action//10
             i += 1
         return env_action
+
+    def interact_model(self):
+        y = []
+        y_ = []
+
+        for i in range(10):
+            state_stack, next_state, reward = self.model_buffer.sample()
+            action = self.select_action(state_stack[-1], env=False)
+
+            # Predict
+            prediction = self.model(torch.cat((state_stack, torch.FloatTensor(action))))
+            reward_prediction = prediction[:self.state_dim]
+
+            #Interact
+            self.buffer.rewards.append(reward_prediction)
+            self.buffer.is_terminals.append(False)
+
+            y_.append(prediction)
+            y.append(torch.cat((next_state, torch.FloatTensor(reward))))
+
+        return y_, y
 
     def update(self):
         # Monte Carlo estimate of returns
@@ -208,6 +238,9 @@ class PPO:
         old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
         old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(device)
 
+        # Interact and Update Model
+        y_, y = self.interact_model()
+        self.model.update(y_, y)
         
         # Optimize policy for K epochs
         for _ in range(self.K_epochs):
@@ -248,14 +281,12 @@ class PPO:
     def load(self, checkpoint_path):
         self.policy_old.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         self.policy.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
-
+        
     
-class PPO_TEAM(BaseTeam):
+class Model_Team:
 
-    logdir = "./ppo_saves"
-
-    def __init__(self, env, logdir="./ppo_saves"):
-        super().__init__( logdir)
+    def __init__(self, env, logdir="./model_saves"):
+        self.logdir = logdir
         
         if not os.path.exists(logdir):
             os.makedirs(logdir)
@@ -271,7 +302,7 @@ class PPO_TEAM(BaseTeam):
         lr_critic = 0.001 
         self.agent1 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
         self.agent2 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
-        self.writer = SummaryWriter('logs/ppo_1')
+        self.writer  = SummaryWriter('logs/ppo_1')
 
     def select_action(self, state1, state2):
         return self.agent1.select_action(state1), self.agent2.select_action(state2)
@@ -311,6 +342,9 @@ class PPO_TEAM(BaseTeam):
                 state_2 = state_arr[1]
 
                 # saving reward and is_terminals
+                self.agent1.model_buffer.rewards.append(reward)
+                self.agent2.model_buffer.rewards.append(reward)
+
                 self.agent1.buffer.rewards.append(reward)
                 self.agent1.buffer.is_terminals.append(done)
                 self.agent2.buffer.rewards.append(reward)
@@ -367,7 +401,20 @@ class PPO_TEAM(BaseTeam):
             i_episode += 1
 
         self.env.close()
-    
-    @staticmethod
-    def bestSaveExists():
-        BaseTeam(PPO_TEAM.logdir)
+       
+    def loadBestModel(self):
+        bestSaveExists = os.path.exists(f'{self.logdir}/best_model_agent1')
+        if bestSaveExists:
+            print("TEAM 1: Best Model Loaded!")
+            self.load("best_model")
+
+    def saveBestModel(self):
+        self.save("best_model")
+
+    def save(self, filename):
+        self.agent1.save(f'{self.logdir}/{filename}_agent1')
+        self.agent2.save(f'{self.logdir}/{filename}_agent2')
+
+    def load(self, filename):
+        self.agent1.load(f'{self.logdir}/{filename}_agent1')
+        self.agent2.load(f'{self.logdir}/{filename}_agent2')
