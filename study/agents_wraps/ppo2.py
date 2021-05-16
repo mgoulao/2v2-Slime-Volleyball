@@ -287,14 +287,16 @@ class PPO_TEAM(BaseTeam):
         log_running_reward = 0
         log_running_episodes = 0
 
+        checkpoint_running_reward = 0
+        checkpoint_running_episodes = 0
+
         time_step = 0
         i_episode = 0
 
-        max_ep_len = 1000
         update_timestep = 4096 
         log_freq = total_timesteps / 100 
         print_freq = total_timesteps / 10
-        checkpoint_model_freq = 1000
+        checkpoint_model_freq = 10000
 
         t = 1
         # training loop
@@ -349,10 +351,16 @@ class PPO_TEAM(BaseTeam):
                     print_running_reward = 0
                     print_running_episodes = 0
 
-                # save model weights
+                # Check for selfplay
                 if time_step % checkpoint_model_freq == 0:
-                    self.env.checkpoint(self, current_ep_reward/t)
-                # break; if the episode is over
+                    checkpoint_avg_reward = checkpoint_running_reward / checkpoint_running_episodes
+                    checkpoint_avg_reward = round(checkpoint_avg_reward, 4)
+
+                    self.env.checkpoint(self, checkpoint_avg_reward)
+
+                    checkpoint_running_reward = 0
+                    checkpoint_running_episodes = 0
+
                 if done:
                     break
                 
@@ -363,6 +371,9 @@ class PPO_TEAM(BaseTeam):
 
             log_running_reward += current_ep_reward
             log_running_episodes += 1
+
+            checkpoint_running_reward += current_ep_reward
+            checkpoint_running_episodes += 1
 
             i_episode += 1
 
