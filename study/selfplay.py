@@ -35,8 +35,8 @@ class SlimeVolleySelfPlayEnv(slimevolleygym.SlimeVolleyEnv):
     if self.selfplay_opponent is not None:
       del self.selfplay_opponent
     self.selfplay_opponent = self.Team(self)
+    print("SELFPLAY: ", end="")
     self.selfplay_opponent.loadBestModel()
-    print("Best Model Loaded!")
   
   def step(self, action_1, action_2):
     if self.renderMode:

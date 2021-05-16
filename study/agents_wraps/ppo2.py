@@ -381,4 +381,4 @@ class PPO_TEAM(BaseTeam):
     
     @staticmethod
     def bestSaveExists():
-        BaseTeam(PPO_TEAM.logdir)
+        return BaseTeam.existsBestModel(PPO_TEAM.logdir)
