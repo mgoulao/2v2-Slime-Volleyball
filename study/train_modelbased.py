@@ -20,8 +20,6 @@ from selfplay import SlimeVolleySelfPlayEnv
 RENDER_MODE = False
 SELFPLAY = True
 
-LOGDIR = "./model_saves"
-
 if __name__=="__main__":
 
     parser = argparse.ArgumentParser(description='Train PPO.')
@@ -32,8 +30,8 @@ if __name__=="__main__":
     RENDER_MODE = args.render
     SELFPLAY = not args.noselfplay
 
-    env = SlimeVolleySelfPlayEnv(Model_Team, LOGDIR, RENDER_MODE, SELFPLAY)
-    teamPPO = Model_Team(env, LOGDIR)
+    env = SlimeVolleySelfPlayEnv(Model_Team, RENDER_MODE, SELFPLAY)
+    teamPPO = Model_Team(env)
     teamPPO.loadBestModel()
 
     teamPPO.train(int(1e7))

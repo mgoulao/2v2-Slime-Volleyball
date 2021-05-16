@@ -2,6 +2,8 @@
 
 import math
 
+from agents_wraps.baseppo import BaseTeam
+
 import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
@@ -283,10 +285,12 @@ class PPO:
         self.policy.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         
     
-class Model_Team:
+class Model_Team(BaseTeam):
+
+    logdir = "./model_saves"
 
     def __init__(self, env, logdir="./model_saves"):
-        self.logdir = logdir
+        super().__init__(logdir)
         
         if not os.path.exists(logdir):
             os.makedirs(logdir)
@@ -300,8 +304,8 @@ class Model_Team:
         gamma = 0.99
         lr_actor = 0.0003
         lr_critic = 0.001 
-        self.agent1 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
-        self.agent2 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
+        self.agent1 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
+        self.agent2 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
         self.writer  = SummaryWriter('logs/ppo_1')
 
     def select_action(self, state1, state2):
@@ -402,19 +406,6 @@ class Model_Team:
 
         self.env.close()
        
-    def loadBestModel(self):
-        bestSaveExists = os.path.exists(f'{self.logdir}/best_model_agent1')
-        if bestSaveExists:
-            print("TEAM 1: Best Model Loaded!")
-            self.load("best_model")
-
-    def saveBestModel(self):
-        self.save("best_model")
-
-    def save(self, filename):
-        self.agent1.save(f'{self.logdir}/{filename}_agent1')
-        self.agent2.save(f'{self.logdir}/{filename}_agent2')
-
-    def load(self, filename):
-        self.agent1.load(f'{self.logdir}/{filename}_agent1')
-        self.agent2.load(f'{self.logdir}/{filename}_agent2')
+    @staticmethod
+    def bestSaveExists():
+        BaseTeam(Model_Team.logdir)
