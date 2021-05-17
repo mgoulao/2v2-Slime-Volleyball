@@ -21,41 +21,13 @@ from gym.envs.registration import register
 import numpy as np
 import cv2 # installed with gym anyways
 from collections import deque
+from game_settings import REF_W, REF_H, REF_U, REF_WALL_WIDTH, REF_WALL_HEIGHT, PLAYER_SPEED_X, PLAYER_SPEED_Y, \
+  MAX_BALL_SPEED, TIMESTEP, NUDGE, FRICTION, INIT_DELAY_FRAMES, GRAVITY, MAXLIVES, WINDOW_WIDTH, WINDOW_HEIGHT, FACTOR, \
+  PIXEL_MODE, PIXEL_SCALE, PIXEL_WIDTH, PIXEL_HEIGHT, RENDER_MODE
+
+from roles import Attacker, Defender, Vanilla
 
 np.set_printoptions(threshold=20, precision=3, suppress=True, linewidth=200)
-
-# game settings:
-
-RENDER_MODE = True
-
-REF_W = 24*2
-REF_H = REF_W
-REF_U = 1.5 # ground height
-REF_WALL_WIDTH = 1.0 # wall width
-REF_WALL_HEIGHT = 5
-PLAYER_SPEED_X = 10*1.75
-PLAYER_SPEED_Y = 10*1.35
-MAX_BALL_SPEED = 15*1.5
-TIMESTEP = 1/30.
-NUDGE = 0.1
-FRICTION = 1.0 # 1 means no FRICTION, less means FRICTION
-INIT_DELAY_FRAMES = 30
-GRAVITY = -9.8*2*1.5
-
-MAXLIVES = 5 # game ends when one agent loses this many games
-
-WINDOW_WIDTH = 1200
-WINDOW_HEIGHT = 500
-
-FACTOR = WINDOW_WIDTH / REF_W
-
-# if set to true, renders using cv2 directly on numpy array
-# (otherwise uses pyglet / opengl -> much smoother for human player)
-PIXEL_MODE = False 
-PIXEL_SCALE = 4 # first render at multiple of Pixel Obs resolution, then downscale. Looks better.
-
-PIXEL_WIDTH = 84*2*1
-PIXEL_HEIGHT = 84*1
 
 def setNightColors():
   ### night time color:
@@ -377,7 +349,7 @@ class RelativeState:
 
 class Agent:
   """ keeps track of the agent in the game. note this is not the policy network """
-  def __init__(self, dir, x, y, c):
+  def __init__(self, dir, x, y, c, role):
     self.dir = dir # -1 means left, 1 means right player for symmetry.
     self.x = x
     self.y = y
@@ -388,8 +360,10 @@ class Agent:
     self.desired_vx = 0
     self.desired_vy = 0
     self.state = RelativeState()
-    self.emotion = "happy"; # hehe...
+    self.emotion = "happy" # hehe...
     self.life = MAXLIVES
+    self.role = role
+
   def lives(self):
     return self.life
     
@@ -416,27 +390,36 @@ class Agent:
     dy = p.y - self.y
     dx = p.x - self.x
     return (dx*dx+dy*dy)
+
   def isColliding(self, p): # returns true if it is colliding w/ p
     r = self.r+p.r
-    return (r*r > self.getDist2(p)) # if distance is less than total radius, then colliding.
+    if self.x-p.x < self.r:         # approximate
+      return r > self.getDist2(p)
+    return r * r > self.getDist2(p) # if distance is less than total radius, then colliding.
+
+  def isOnTop(self, abx, aby):
+    return abx >= 0 and aby*aby <= 2*self.r*self.r
+
   def bounce(self, p): # bounce two agents that have collided
     abx = self.x-p.x
     aby = self.y-p.y
-    if (abx == 0 and aby*aby <= 2*self.r*self.r): # special cases when p is on top of the agent, exactly alligned
-      self.vy = 0
-      if (self.y > p.y and self.y != p.y + p.r):
+    abd = math.sqrt(abx * abx + aby * aby)
+    abx /= abd  # normalize
+    aby /= abd
+    nx = abx  # reuse calculation
+    ny = aby
+    abx *= NUDGE
+    aby *= NUDGE
+
+    if self.isOnTop(abx, aby):  # special cases when p is on top of the agent, exactly alligned
+      self.vy = 0 # need to change p.y so it reaches 0 quicker
+      if self.y > p.y:
         self.y = p.y + p.r + self.desired_vy
-    else:
-      abd = math.sqrt(abx*abx+aby*aby)
-      abx /= abd # normalize 
-      aby /= abd 
-      nx = abx # reuse calculation
-      ny = aby
-      abx *= NUDGE
-      aby *= NUDGE
-      while(self.isColliding(p)):
-        self.x += abx
-        self.y += aby
+
+    while self.isColliding(p) and not self.isOnTop(abx, aby):
+      self.x += abx
+      self.y += aby
+
     # ux = self.vx - p.vx
     # uy = self.vy - p.vy
     # un = ux*nx + uy*ny
@@ -505,6 +488,7 @@ class Agent:
     self.state.o2y = opponent2.y
     self.state.o2vx = opponent2.vx*(-self.dir)
     self.state.o2vy = opponent2.vy
+
   def getObservation(self):
     return self.state.getObservation()
 
@@ -620,6 +604,7 @@ class Game:
     self.delayScreen = None
     self.np_random = np_random
     self.reset()
+
   def reset(self):
     self.ground = Wall(0, 0.75, REF_W, REF_U, c=GROUND_COLOR)
     self.fence = Wall(0, 0.75 + REF_WALL_HEIGHT/2, REF_WALL_WIDTH, (REF_WALL_HEIGHT-1.5), c=FENCE_COLOR)
@@ -627,10 +612,10 @@ class Game:
     ball_vx = self.np_random.uniform(low=-20, high=20)
     ball_vy = self.np_random.uniform(low=10, high=25)
     self.ball = Particle(0, REF_W/4, ball_vx, ball_vy, 0.5, c=BALL_COLOR)
-    self.agent1 = Agent(1, REF_W/6, 1.5, c=AGENT1_COLOR)
-    self.agent2 = Agent(1, REF_W/3, 1.5, c=AGENT2_COLOR)
-    self.agent3 = Agent(-1, -REF_W/6, 1.5, c=AGENT3_COLOR)
-    self.agent4 = Agent(-1, -REF_W/3, 1.5, c=AGENT4_COLOR)
+    self.agent1 = Agent(1, REF_W / 6, 1.5, c=AGENT1_COLOR, role=Attacker())
+    self.agent2 = Agent(1, REF_W/3, 1.5, c=AGENT2_COLOR, role=Defender())
+    self.agent3 = Agent(-1, -REF_W/6, 1.5, c=AGENT3_COLOR, role=Vanilla())
+    self.agent4 = Agent(-1, -REF_W/3, 1.5, c=AGENT4_COLOR, role=Vanilla())
     self.agent1.updateState(self.agent2, self.ball, self.agent3, self.agent4)
     self.agent2.updateState(self.agent1, self.ball, self.agent3, self.agent4)
     self.agent3.updateState(self.agent4, self.ball, self.agent1, self.agent2)
@@ -680,7 +665,7 @@ class Game:
     if (self.ball.isColliding(self.fenceStub)):
       self.ball.bounce(self.fenceStub)
 
-    # negated, since we want reward to be from the persepctive of right agent being trained.
+    # negated, since we want reward to be from the perspective of right agent being trained.
     result = -self.ball.checkEdges()
 
     if (result != 0):

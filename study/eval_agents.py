@@ -85,6 +85,7 @@ def evaluate_multiagent(env, policy_1, policy_2, n_trials=1000, init_seed=721):
 
 if __name__=="__main__":
 
+<<<<<<< HEAD
     APPROVED_MODELS = ["baseline", "ppo"]
 
     def check_choice(choice):
@@ -130,3 +131,84 @@ if __name__=="__main__":
     print("history dump:", history)
     print(right_agent_choice+" scored", np.round(np.mean(history), 3), "±", np.round(np.std(history), 3), "vs",
         left_agent_choice, "over")
+=======
+  APPROVED_MODELS = ["baseline", "ppo", "ga", "cma", "random"]
+
+  def checkchoice(choice):
+    choice = choice.lower()
+    if choice not in APPROVED_MODELS:
+      return False
+    return True
+
+  PATH = {
+    "baseline": None,
+    "ppo": "zoo/ppo/best_model.zip",
+    "cma": "zoo/cmaes/slimevolley.cma.64.96.best.json",
+    "ga": "zoo/ga_sp/ga.json",
+    "random": None,
+  }
+
+  MODEL = {
+    "baseline": makeBaselinePolicy,
+    "ppo": PPOPolicy,
+    "cma": makeSlimePolicy,
+    "ga": makeSlimePolicyLite,
+    "random": RandomPolicy,
+  }
+
+  parser = argparse.ArgumentParser(description='Evaluate pre-trained agents against each other.')
+  parser.add_argument('--left', help='choice of (baseline, ppo, cma, ga, random)', type=str, default="baseline")
+  parser.add_argument('--leftpath', help='path to left model (leave blank for zoo)', type=str, default="")
+  parser.add_argument('--right', help='choice of (baseline, ppo, cma, ga, random)', type=str, default="ga")
+  parser.add_argument('--rightpath', help='path to right model (leave blank for zoo)', type=str, default="")
+  parser.add_argument('--render', action='store_true', help='render to screen?', default=False)
+  parser.add_argument('--day', action='store_true', help='daytime colors?', default=False)
+  parser.add_argument('--pixel', action='store_true', help='pixel rendering effect? (note: not pixel obs mode)', default=False)
+  parser.add_argument('--seed', help='random seed (integer)', type=int, default=721)
+  parser.add_argument('--trials', help='number of trials (default 1000)', type=int, default=1000)
+
+  args = parser.parse_args()
+
+  if args.day:
+    slimevolleygym.setDayColors()
+
+  if args.pixel:
+    slimevolleygym.setPixelObsMode()
+
+  env = gym.make("SlimeVolley-v0")
+  env.seed(args.seed)
+
+  render_mode = args.render
+
+  assert checkchoice(args.right), "pls enter a valid agent"
+  assert checkchoice(args.left), "pls enter a valid agent"
+
+  c0 = args.right
+  c1 = args.left
+
+  path0 = PATH[c0]
+  path1 = PATH[c1]
+
+  if len(args.rightpath) > 0:
+    assert os.path.exists(args.rightpath), args.rightpath+" doesn't exist."
+    path0 = args.rightpath
+    print("path of right model", path0)
+
+  if len(args.leftpath):
+    assert os.path.exists(args.leftpath), args.leftpath+" doesn't exist."
+    path1 = args.leftpath
+    print("path of left model", path1)
+
+  if c0.startswith("ppo") or c1.startswith("ppo"):
+    from stable_baselines3 import PPO1
+
+  policy0 = MODEL[c0](path0) # the right agent
+  policy1 = MODEL[c1](path1) # the left agent
+
+  history = evaluate_multiagent(env, policy0, policy1,
+    render_mode=render_mode, n_trials=args.trials, init_seed=args.seed)
+
+  print("history dump:", history)
+  print(c0+" scored", np.round(np.mean(history), 3), "±", np.round(np.std(history), 3), "vs",
+    c1, "over", args.trials, "trials.")
+>>>>>>> origin/abstract_roles
