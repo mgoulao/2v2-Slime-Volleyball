@@ -12,6 +12,10 @@ import numpy as np
 
 import os
 
+sys.path.append('../slimevolleygymrepo')
+
+from slimevolleygym.roles import Attacker, Defender 
+
 ################################## set device ##################################
 
 print("============================================================================================")
@@ -144,7 +148,7 @@ class ActorCritic(nn.Module):
 
 
 class PPO:
-    def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std_init=0.6):
+    def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std_init=0.6, attacker=False):
 
         self.has_continuous_action_space = has_continuous_action_space
         self.action_space = action_space
@@ -168,6 +172,8 @@ class PPO:
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
+
+        self.role = Attacker() if attacker else Defender()
 
     def select_action(self, state):
         with torch.no_grad():
@@ -240,10 +246,15 @@ class PPO:
         # clear buffer
         self.buffer.clear()
 
+    def reward(self, prev_state, state, reward):
+        return self.role.reward(prev_state[0], prev_state[1], state[0], state[1], prev_state[8], prev_state[9], \
+            state[8], state[9], reward, prev_state[4], prev_state[5], state[4], state[5])
+
+    def decide(self, state):
+        self.role.decide(self, state)
 
     def save(self, checkpoint_path):
         torch.save(self.policy_old.state_dict(), checkpoint_path)
-
 
     def load(self, checkpoint_path):
         self.policy_old.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
@@ -269,15 +280,23 @@ class ROLES_TEAM(BaseTeam):
         gamma = 0.99
         lr_actor = 0.0003
         lr_critic = 0.001 
-        self.agent1 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
-        self.agent2 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False)
-        self.writer = SummaryWriter('logs/ppo_1')
+        self.agent1 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False, attacker=True)
+        self.agent2 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False, attacker=False)
+        self.writer = SummaryWriter('logs/roles_1')
 
     def select_action(self, state1, state2):
         return self.agent1.select_action(state1), self.agent2.select_action(state2)
 
     def predict(self, state1, state2):
         return self.select_action(state1, state2)
+
+    def reward(self, prev_state_1, prev_state_2, state_1, state_2, reward):
+        return self.agent1.reward(prev_state_1, state_1, reward), \
+            self.agent2.reward(prev_state_2, state_2, reward)
+
+    def decide_role(self, state_1, state_2):
+        return self.agent1.reward(state_1), \
+            self.agent2.reward(state_2)
 
     def train(self, total_timesteps):
         # printing and logging variables
@@ -298,6 +317,8 @@ class ROLES_TEAM(BaseTeam):
         print_freq = total_timesteps / 10
         checkpoint_model_freq = 10000
 
+        role_decide_freq = 5
+
         t = 1
         # training loop
         while time_step < total_timesteps:
@@ -309,17 +330,23 @@ class ROLES_TEAM(BaseTeam):
                 # select action with policy
                 action_1, action_2 = self.select_action(state_1, state_2)
                 state_arr, reward, done, _ = self.env.step(action_1, action_2)
+
+                reward_1, reward_2 = self.reward(state_1, state_2, state_arr[0], state_arr[1], reward)
+
                 state_1 = state_arr[0]
                 state_2 = state_arr[1]
 
                 # saving reward and is_terminals
-                self.agent1.buffer.rewards.append(reward)
+                self.agent1.buffer.rewards.append(reward_1)
                 self.agent1.buffer.is_terminals.append(done)
-                self.agent2.buffer.rewards.append(reward)
+                self.agent2.buffer.rewards.append(reward_2)
                 self.agent2.buffer.is_terminals.append(done)
 
                 time_step +=1
                 current_ep_reward += reward
+
+                if time_step % role_decide_freq == 0:
+                    self.decide_role(state_1, state_2)
 
                 # update PPO agent
                 if time_step % update_timestep == 0:

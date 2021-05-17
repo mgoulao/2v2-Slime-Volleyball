@@ -204,6 +204,7 @@ class Defender(AD):
             return reward * step
 
     def switch(self, agent):
+        del agent.role
         agent.role = Attacker()
 
     def decide(self, *args):

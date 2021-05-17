@@ -306,7 +306,7 @@ class Model_Team(BaseTeam):
         lr_critic = 0.001 
         self.agent1 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
         self.agent2 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
-        self.writer  = SummaryWriter('logs/ppo_1')
+        self.writer  = SummaryWriter('logs/model_1')
 
     def select_action(self, state1, state2):
         return self.agent1.select_action(state1), self.agent2.select_action(state2)
