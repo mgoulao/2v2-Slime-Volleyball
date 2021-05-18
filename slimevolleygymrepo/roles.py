@@ -123,7 +123,7 @@ class Attacker(AD):
             # If ball is getting closer to teammate, reward should be higher for standing still
             d1 = self.__step(REF_W/2, tpx, tpy, bnx, bny)
             d2 = self.__step(REF_W/2, tnx, tny, bnx, bny)
-            if d2 < d1 and d2 < 0.2:
+            if d1 < d2 < 0.2:
                 if px == nx and py == ny:
                     reward = reward * 1.2
                 else:
@@ -138,7 +138,7 @@ class Attacker(AD):
             return reward
         else:
             step = self.__step(REF_W/6, nx, ny, tpx, tpy)
-            return reward * step
+            return reward * (1 - step)
 
     def switch(self, agent):
         agent.role = Defender()
@@ -188,7 +188,7 @@ class Defender(AD):
             # If ball is moving away from teammate, reward should be higher for standing still
             d1 = self.__step(REF_W / 2, tpx, tpy, bnx, bny)
             d2 = self.__step(REF_W / 2, tnx, tny, bnx, bny)
-            if d2 > d1 and d2 > 0.2:
+            if d1 > d2 >= 0.2:
                 if px == nx and py == ny:
                     reward = reward * 1.2
                 else:
@@ -201,7 +201,7 @@ class Defender(AD):
             return reward
         else:
             step = self.__step(REF_W/6, nx, ny, tpx, tpy)
-            return reward * step
+            return reward * (1 - step)
 
     def switch(self, agent):
         agent.role = Attacker()
