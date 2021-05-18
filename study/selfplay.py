@@ -1,7 +1,5 @@
 import sys
 
-from eval_agents import PPO1
-
 sys.path.append('../slimevolleygymrepo')
 
 import slimevolleygym 

@@ -11,10 +11,10 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 
 import os
-
+import sys
 sys.path.append('../slimevolleygymrepo')
 
-from slimevolleygym.roles import Attacker, Defender 
+from roles import Attacker, Defender 
 
 ################################## set device ##################################
 
@@ -173,6 +173,7 @@ class PPO:
         
         self.MseLoss = nn.MSELoss()
 
+        self.teammate = None
         self.role = Attacker() if attacker else Defender()
 
     def select_action(self, state):
@@ -247,11 +248,10 @@ class PPO:
         self.buffer.clear()
 
     def reward(self, prev_state, state, reward):
-        return self.role.reward(prev_state[0], prev_state[1], state[0], state[1], prev_state[8], prev_state[9], \
-            state[8], state[9], reward, prev_state[4], prev_state[5], state[4], state[5])
+        return self.role.reward(prev_state, state, reward)
 
     def decide(self, state):
-        self.role.decide(self, state)
+        self.role.decide(self, state, self.teammate)
 
     def save(self, checkpoint_path):
         torch.save(self.policy_old.state_dict(), checkpoint_path)
@@ -282,6 +282,8 @@ class ROLES_TEAM(BaseTeam):
         lr_critic = 0.001 
         self.agent1 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False, attacker=True)
         self.agent2 = PPO(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, False, attacker=False)
+        self.agent1.teammate = self.agent2
+        self.agent2.teammate = self.agent1
         self.writer = SummaryWriter('logs/roles_1')
 
     def select_action(self, state1, state2):
@@ -295,8 +297,8 @@ class ROLES_TEAM(BaseTeam):
             self.agent2.reward(prev_state_2, state_2, reward)
 
     def decide_role(self, state_1, state_2):
-        return self.agent1.reward(state_1), \
-            self.agent2.reward(state_2)
+        return self.agent1.decide(state_1), \
+            self.agent2.decide(state_2)
 
     def train(self, total_timesteps):
         # printing and logging variables

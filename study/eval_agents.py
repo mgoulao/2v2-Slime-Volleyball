@@ -81,6 +81,9 @@ def evaluate_multiagent(env, policy_1, policy_2, n_trials=1000, init_seed=721):
         cumulative_score = rollout(env, policy_1, policy_2, render_mode=render_mode)
         print("cumulative score #", i, ":", cumulative_score)
         history.append(cumulative_score)
+
+        # TODO: Check if agents have a role and update it
+
     return history
 
 if __name__=="__main__":
