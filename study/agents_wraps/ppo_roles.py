@@ -265,7 +265,7 @@ class ROLES_TEAM(BaseTeam):
 
     logdir = "./roles_saves"
 
-    def __init__(self, env, logdir="./ppo_saves"):
+    def __init__(self, env, logdir="./roles_saves"):
         super().__init__(logdir)
         
         if not os.path.exists(logdir):
