@@ -414,7 +414,7 @@ class Agent:
     if self.isOnTop(abx, aby):  # special cases when p is on top of the agent, exactly alligned
       self.vy = 0 # need to change p.y so it reaches 0 quicker
       if self.y > p.y:
-        self.y = p.y + p.r + self.desired_vy
+        self.y = p.y + p.r + self.desired_vy*0.3
 
     while self.isColliding(p) and not self.isOnTop(abx, aby):
       self.x += abx
