@@ -20,7 +20,7 @@ from selfplay import SlimeVolleySelfPlayEnv
 RENDER_MODE = False
 SELFPLAY = True
 
-LOGDIR = "./ppo_logs"
+LOGDIR = "./single_ppo_logs"
 
 class MODEL_TEAM:
     def __init__(self, env):
