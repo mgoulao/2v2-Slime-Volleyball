@@ -12,7 +12,8 @@ class SlimeVolleySelfPlayEnv(slimevolleygym.SlimeVolleyEnv):
     super(SlimeVolleySelfPlayEnv, self).__init__()
     self.Team = team
     self.selfplay = selfplay
-    self.policy = self
+    if selfplay:
+      self.policy = self
     self.selfplay_opponent = None
     self.renderMode = renderMode
 
