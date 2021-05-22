@@ -391,12 +391,10 @@ class Agent:
 
   def isColliding(self, p): # returns true if it is colliding w/ p
     r = self.r+p.r
-    if self.x-p.x < self.r:         # approximate
-      return r > self.getDist2(p)
     return r * r > self.getDist2(p) # if distance is less than total radius, then colliding.
 
   def isOnTop(self, abx, aby):
-    return abx >= 0 and aby*aby <= 2*self.r*self.r
+    return abx == 0 and aby*aby <= 2*self.r*self.r
 
   def bounce(self, p): # bounce two agents that have collided
     abx = self.x-p.x
@@ -650,7 +648,7 @@ class Game:
     if self.delayScreen.status():
       self.ball.applyAcceleration(0, GRAVITY)
       self.ball.limitSpeed(0, MAX_BALL_SPEED)
-      self.ball.move()
+      #self.ball.move()
 
     if (self.ball.isColliding(self.agent1)):
       self.ball.bounce(self.agent1)
