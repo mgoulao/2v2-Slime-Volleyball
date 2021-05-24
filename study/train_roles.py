@@ -11,7 +11,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module='gym')
 
 import argparse
 
-from agents_wraps.ppo2 import PPO_TEAM
+from agents_wraps.ppo_roles import ROLES_TEAM
 from selfplay import SlimeVolleySelfPlayEnv
 
 RENDER_MODE = False
@@ -19,7 +19,7 @@ SELFPLAY = True
 
 if __name__=="__main__":
 
-    parser = argparse.ArgumentParser(description='Train PPO.')
+    parser = argparse.ArgumentParser(description='Train PPO with roles.')
     parser.add_argument('--render', action='store_true', help='Enable environment render', default=False)
     parser.add_argument('--noselfplay', action='store_true', help='Disable selfplay', default=False)
     args = parser.parse_args()
@@ -27,10 +27,10 @@ if __name__=="__main__":
     RENDER_MODE = args.render
     SELFPLAY = not args.noselfplay
 
-    env = SlimeVolleySelfPlayEnv(PPO_TEAM, RENDER_MODE, SELFPLAY)
-    teamPPO = PPO_TEAM(env)
+    env = SlimeVolleySelfPlayEnv(ROLES_TEAM, RENDER_MODE, SELFPLAY)
+    teamPPO = ROLES_TEAM(env)
     teamPPO.loadBestModel()
 
     teamPPO.train(int(1e7))
-    teamPPO.save("selfplay_ppo")
+    teamPPO.save("selfplay_roles")
 

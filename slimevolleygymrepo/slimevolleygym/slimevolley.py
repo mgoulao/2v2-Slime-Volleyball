@@ -21,52 +21,28 @@ from gym.envs.registration import register
 import numpy as np
 import cv2 # installed with gym anyways
 from collections import deque
+from game_settings import REF_W, REF_H, REF_U, REF_WALL_WIDTH, REF_WALL_HEIGHT, PLAYER_SPEED_X, PLAYER_SPEED_Y, \
+  MAX_BALL_SPEED, TIMESTEP, NUDGE, FRICTION, INIT_DELAY_FRAMES, GRAVITY, MAXLIVES, WINDOW_WIDTH, WINDOW_HEIGHT, FACTOR, \
+  PIXEL_MODE, PIXEL_SCALE, PIXEL_WIDTH, PIXEL_HEIGHT, RENDER_MODE
+
+from roles import Attacker, Defender, Vanilla
 
 np.set_printoptions(threshold=20, precision=3, suppress=True, linewidth=200)
 
-# game settings:
-
-RENDER_MODE = True
-
-REF_W = 24*2
-REF_H = REF_W
-REF_U = 1.5 # ground height
-REF_WALL_WIDTH = 1.0 # wall width
-REF_WALL_HEIGHT = 3.5
-PLAYER_SPEED_X = 10*1.75
-PLAYER_SPEED_Y = 10*1.35
-MAX_BALL_SPEED = 15*1.5
-TIMESTEP = 1/30.
-NUDGE = 0.1
-FRICTION = 1.0 # 1 means no FRICTION, less means FRICTION
-INIT_DELAY_FRAMES = 30
-GRAVITY = -9.8*2*1.5
-
-MAXLIVES = 5 # game ends when one agent loses this many games
-
-WINDOW_WIDTH = 1200
-WINDOW_HEIGHT = 500
-
-FACTOR = WINDOW_WIDTH / REF_W
-
-# if set to true, renders using cv2 directly on numpy array
-# (otherwise uses pyglet / opengl -> much smoother for human player)
-PIXEL_MODE = False 
-PIXEL_SCALE = 4 # first render at multiple of Pixel Obs resolution, then downscale. Looks better.
-
-PIXEL_WIDTH = 84*2*1
-PIXEL_HEIGHT = 84*1
-
 def setNightColors():
   ### night time color:
-  global BALL_COLOR, AGENT_LEFT_COLOR, AGENT_RIGHT_COLOR
-  global PIXEL_AGENT_LEFT_COLOR, PIXEL_AGENT_RIGHT_COLOR
+  global BALL_COLOR, AGENT1_COLOR, AGENT2_COLOR, AGENT3_COLOR, AGENT4_COLOR
+  global PIXEL_AGENT1_COLOR, PIXEL_AGENT2_COLOR, PIXEL_AGENT3_COLOR, PIXEL_AGENT4_COLOR
   global BACKGROUND_COLOR, FENCE_COLOR, COIN_COLOR, GROUND_COLOR
   BALL_COLOR = (217, 79, 0)
-  AGENT_LEFT_COLOR = (35, 93, 188)
-  AGENT_RIGHT_COLOR = (255, 236, 0)
-  PIXEL_AGENT_LEFT_COLOR = (255, 191, 0) # AMBER
-  PIXEL_AGENT_RIGHT_COLOR = (255, 191, 0) # AMBER
+  AGENT1_COLOR = (255, 236, 0) # yellow
+  AGENT2_COLOR = (255, 175, 0) # orange
+  AGENT3_COLOR = (35, 95, 185) # blue
+  AGENT4_COLOR = (180, 80, 230) # purple
+  PIXEL_AGENT1_COLOR = (255, 191, 0) # AMBER
+  PIXEL_AGENT2_COLOR = (255, 191, 0) # AMBER
+  PIXEL_AGENT3_COLOR = (255, 191, 0) # AMBER
+  PIXEL_AGENT4_COLOR = (255, 191, 0) # AMBER
   
   BACKGROUND_COLOR = (11, 16, 19)
   FENCE_COLOR = (102, 56, 35)
@@ -76,18 +52,23 @@ def setNightColors():
 def setDayColors():
   ### day time color:
   ### note: do not use day time colors for pixel-obs training.
-  global BALL_COLOR, AGENT_LEFT_COLOR, AGENT_RIGHT_COLOR
-  global PIXEL_AGENT_LEFT_COLOR, PIXEL_AGENT_RIGHT_COLOR
+  global BALL_COLOR, AGENT1_COLOR, AGENT2_COLOR, AGENT3_COLOR, AGENT4_COLOR
+  global PIXEL_AGENT1_COLOR, PIXEL_AGENT2_COLOR, PIXEL_AGENT3_COLOR, PIXEL_AGENT4_COLOR
   global BACKGROUND_COLOR, FENCE_COLOR, COIN_COLOR, GROUND_COLOR
   global PIXEL_SCALE, PIXEL_WIDTH, PIXEL_HEIGHT
   PIXEL_SCALE = int(4*1.0)
   PIXEL_WIDTH = int(84*2*1.0)
   PIXEL_HEIGHT = int(84*1.0)
   BALL_COLOR = (255, 200, 20)
-  AGENT_LEFT_COLOR = (240, 75, 0)
-  AGENT_RIGHT_COLOR = (0, 150, 255)
-  PIXEL_AGENT_LEFT_COLOR = (240, 75, 0)
-  PIXEL_AGENT_RIGHT_COLOR = (0, 150, 255)
+  AGENT1_COLOR = (255, 60, 0) # red (yellow)
+  AGENT2_COLOR = (255, 175, 0) # orange
+  AGENT3_COLOR = (35, 95, 185) # blue
+  AGENT4_COLOR = (180, 80, 230) # purple
+  PIXEL_AGENT1_COLOR = (0, 150, 255)
+  PIXEL_AGENT2_COLOR = (0, 150, 255)
+  PIXEL_AGENT3_COLOR = (240, 75, 0)
+  PIXEL_AGENT4_COLOR = (240, 75, 0)
+  
   
   BACKGROUND_COLOR = (255, 255, 255)
   FENCE_COLOR = (240, 210, 130)
@@ -110,13 +91,16 @@ def setPixelObsMode():
 
   also, both agent colors are identical, to potentially facilitate multiagent
   """
-  global WINDOW_WIDTH, WINDOW_HEIGHT, FACTOR, AGENT_LEFT_COLOR, AGENT_RIGHT_COLOR, PIXEL_MODE
+  global WINDOW_WIDTH, WINDOW_HEIGHT, FACTOR, AGENT1_COLOR, AGENT2_COLOR, AGENT3_COLOR, AGENT4_COLOR, PIXEL_MODE
   PIXEL_MODE = True
   WINDOW_WIDTH = PIXEL_WIDTH * PIXEL_SCALE
   WINDOW_HEIGHT = PIXEL_HEIGHT * PIXEL_SCALE
   FACTOR = WINDOW_WIDTH / REF_W
-  AGENT_LEFT_COLOR = PIXEL_AGENT_LEFT_COLOR
-  AGENT_RIGHT_COLOR = PIXEL_AGENT_RIGHT_COLOR
+  AGENT1_COLOR = PIXEL_AGENT1_COLOR
+  AGENT2_COLOR = PIXEL_AGENT2_COLOR
+  AGENT3_COLOR = PIXEL_AGENT3_COLOR
+  AGENT4_COLOR = PIXEL_AGENT4_COLOR
+  
 
 def upsize_image(img):
   return cv2.resize(img, (PIXEL_WIDTH * PIXEL_SCALE, PIXEL_HEIGHT * PIXEL_SCALE), interpolation=cv2.INTER_NEAREST)
@@ -243,7 +227,7 @@ class Particle:
       self.x = self.r-REF_W/2+NUDGE*TIMESTEP
 
     if (self.x >= (REF_W/2-self.r)):
-      self.vx *= -FRICTION;
+      self.vx *= -FRICTION
       self.x = REF_W/2-self.r-NUDGE*TIMESTEP
 
     if (self.y<=(self.r+REF_U)):
@@ -333,27 +317,37 @@ class RelativeState:
     self.y = 0
     self.vx = 0
     self.vy = 0
+    # agent's team-mate
+    self.tx = 0
+    self.ty = 0
+    self.tvx = 0
+    self.tvy = 0
     # ball
     self.bx = 0
     self.by = 0
     self.bvx = 0
     self.bvy = 0
-    # opponent
-    self.ox = 0
-    self.oy = 0
-    self.ovx = 0
-    self.ovy = 0
+    # opponent 1
+    self.o1x = 0
+    self.o1y = 0
+    self.o1vx = 0
+    self.o1vy = 0
+    # opponent 2
+    self.o2x = 0
+    self.o2y = 0
+    self.o2vx = 0
+    self.o2vy = 0
   def getObservation(self):
     result = [self.x, self.y, self.vx, self.vy,
-              self.bx, self.by, self.bvx, self.bvy,
-              self.ox, self.oy, self.ovx, self.ovy]
+              self.tx, self.ty, self.tvx, self.tvy,
+              self.bx, self.by, self.bvx, self.bvy]
     scaleFactor = 10.0  # scale inputs to be in the order of magnitude of 10 for neural network.
     result = np.array(result) / scaleFactor
     return result
 
 class Agent:
   """ keeps track of the agent in the game. note this is not the policy network """
-  def __init__(self, dir, x, y, c):
+  def __init__(self, dir, x, y, c, role):
     self.dir = dir # -1 means left, 1 means right player for symmetry.
     self.x = x
     self.y = y
@@ -364,10 +358,13 @@ class Agent:
     self.desired_vx = 0
     self.desired_vy = 0
     self.state = RelativeState()
-    self.emotion = "happy"; # hehe...
+    self.emotion = "happy" # hehe...
     self.life = MAXLIVES
+    self.role = role
+
   def lives(self):
     return self.life
+    
   def setAction(self, action):
     forward = False
     backward = False
@@ -386,13 +383,58 @@ class Agent:
       self.desired_vx = PLAYER_SPEED_X
     if jump:
       self.desired_vy = PLAYER_SPEED_Y
+  
+  def getDist2(self, p): # returns distance squared from p
+    dy = p.y - self.y
+    dx = p.x - self.x
+    return (dx*dx+dy*dy)
+
+  def isColliding(self, p): # returns true if it is colliding w/ p
+    r = self.r+p.r
+    return r * r > self.getDist2(p) # if distance is less than total radius, then colliding.
+
+  def isOnTop(self, abx, aby):
+    return abx == 0 and aby*aby <= 2*self.r*self.r
+
+  def bounce(self, p): # bounce two agents that have collided
+    abx = self.x-p.x
+    aby = self.y-p.y
+    abd = math.sqrt(abx * abx + aby * aby)
+    abx /= abd  # normalize
+    aby /= abd
+    nx = abx  # reuse calculation
+    ny = aby
+    abx *= NUDGE
+    aby *= NUDGE
+
+    if self.isOnTop(abx, aby):  # special cases when p is on top of the agent, exactly alligned
+      self.vy = 0 # need to change p.y so it reaches 0 quicker
+      if self.y > p.y:
+        self.y = p.y + p.r + self.desired_vy*0.3
+
+    while self.isColliding(p) and not self.isOnTop(abx, aby):
+      self.x += abx
+      self.y += aby
+
+    # ux = self.vx - p.vx
+    # uy = self.vy - p.vy
+    # un = ux*nx + uy*ny
+    # unx = nx*(un*2.) # added factor of 2
+    # uny = ny*(un*2.) # added factor of 2
+    # ux -= unx
+    # uy -= uny
+    # self.vx = ux + p.vx
+    # self.vy = uy + p.vy
+
   def move(self):
     self.x += self.vx * TIMESTEP
     self.y += self.vy * TIMESTEP
+    
   def step(self):
     self.x += self.vx * TIMESTEP
     self.y += self.vy * TIMESTEP
-  def update(self):
+
+  def update(self): 
     self.vy += GRAVITY * TIMESTEP
 
     if (self.y <= REF_U + NUDGE*TIMESTEP):
@@ -407,30 +449,42 @@ class Agent:
       self.vy = 0;
 
     # stay in their own half:
-    if (self.x*self.dir <= (REF_WALL_WIDTH/2+self.r) ):
+    if (self.x*self.dir <= (REF_WALL_WIDTH/2+self.r) ): # collision with fence
       self.vx = 0;
       self.x = self.dir*(REF_WALL_WIDTH/2+self.r)
 
-    if (self.x*self.dir >= (REF_W/2-self.r) ):
+    if (self.x*self.dir >= (REF_W/2-self.r) ): # collision with wall
       self.vx = 0;
       self.x = self.dir*(REF_W/2-self.r)
-  def updateState(self, ball, opponent):
+
+  def updateState(self, teammate, ball, opponent, opponent2):
     """ normalized to side, appears different for each agent's perspective"""
     # agent's self
     self.state.x = self.x*self.dir
     self.state.y = self.y
     self.state.vx = self.vx*self.dir
     self.state.vy = self.vy
+    # agent's team-mate
+    self.state.tx = teammate.x*self.dir
+    self.state.ty = teammate.y
+    self.state.tvx = teammate.vx*self.dir
+    self.state.tvy = teammate.vy
     # ball
     self.state.bx = ball.x*self.dir
     self.state.by = ball.y
     self.state.bvx = ball.vx*self.dir
     self.state.bvy = ball.vy
-    # opponent
-    self.state.ox = opponent.x*(-self.dir)
-    self.state.oy = opponent.y
-    self.state.ovx = opponent.vx*(-self.dir)
-    self.state.ovy = opponent.vy
+    # opponent 1
+    self.state.o1x = opponent.x*(-self.dir)
+    self.state.o1y = opponent.y
+    self.state.o1vx = opponent.vx*(-self.dir)
+    self.state.o1vy = opponent.vy
+    # opponent 2
+    self.state.o2x = opponent2.x*(-self.dir)
+    self.state.o2y = opponent2.y
+    self.state.o2vx = opponent2.vx*(-self.dir)
+    self.state.o2vy = opponent2.vy
+
   def getObservation(self):
     return self.state.getObservation()
 
@@ -508,8 +562,8 @@ class BaselinePolicy:
     self.prevOutputState = self.outputState
     self.outputState = np.tanh(np.dot(self.weight, self.inputState)+self.bias)
   def _setInputState(self, obs):
-    # obs is: (op is opponent). obs is also from perspective of the agent (x values negated for other agent)
-    [x, y, vx, vy, ball_x, ball_y, ball_vx, ball_vy, op_x, op_y, op_vx, op_vy] = obs
+    # obs is: (op is opponent) (tm is team-mate). obs is also from perspective of the agent (x values negated for other agent)
+    [x, y, vx, vy, tm_x, tm_y, tm_vx, tm_vy, ball_x, ball_y, ball_vx, ball_vy] = obs #, op1_x, op1_y, op1_vx, op1_vy, op2_x, op2_y, op2_vx, op2_vy] = obs
     self.inputState[0:self.nGameInput] = np.array([x, y, vx, vy, ball_x, ball_y, ball_vx, ball_vy])
     self.inputState[self.nGameInput:] = self.outputState
   def _getAction(self):
@@ -539,67 +593,103 @@ class Game:
     self.ground = None
     self.fence = None
     self.fenceStub = None
-    self.agent_left = None
-    self.agent_right = None
+    self.agent1 = None
+    self.agent2 = None
+    self.agent3 = None
+    self.agent4 = None
     self.delayScreen = None
     self.np_random = np_random
     self.reset()
+
   def reset(self):
     self.ground = Wall(0, 0.75, REF_W, REF_U, c=GROUND_COLOR)
     self.fence = Wall(0, 0.75 + REF_WALL_HEIGHT/2, REF_WALL_WIDTH, (REF_WALL_HEIGHT-1.5), c=FENCE_COLOR)
-    self.fenceStub = Particle(0, REF_WALL_HEIGHT, 0, 0, REF_WALL_WIDTH/2, c=FENCE_COLOR);
+    self.fenceStub = Particle(0, REF_WALL_HEIGHT, 0, 0, REF_WALL_WIDTH/2, c=FENCE_COLOR)
     ball_vx = self.np_random.uniform(low=-20, high=20)
     ball_vy = self.np_random.uniform(low=10, high=25)
-    self.ball = Particle(0, REF_W/4, ball_vx, ball_vy, 0.5, c=BALL_COLOR);
-    self.agent_left = Agent(-1, -REF_W/4, 1.5, c=AGENT_LEFT_COLOR)
-    self.agent_right = Agent(1, REF_W/4, 1.5, c=AGENT_RIGHT_COLOR)
-    self.agent_left.updateState(self.ball, self.agent_right)
-    self.agent_right.updateState(self.ball, self.agent_left)
+    self.ball = Particle(0, REF_W/4, ball_vx, ball_vy, 0.5, c=BALL_COLOR)
+    self.agent1 = Agent(1, REF_W / 6, 1.5, c=AGENT1_COLOR, role=Attacker())
+    self.agent2 = Agent(1, REF_W/3, 1.5, c=AGENT2_COLOR, role=Defender())
+    self.agent3 = Agent(-1, -REF_W/6, 1.5, c=AGENT3_COLOR, role=Vanilla())
+    self.agent4 = Agent(-1, -REF_W/3, 1.5, c=AGENT4_COLOR, role=Vanilla())
+    self.agent1.updateState(self.agent2, self.ball, self.agent3, self.agent4)
+    self.agent2.updateState(self.agent1, self.ball, self.agent3, self.agent4)
+    self.agent3.updateState(self.agent4, self.ball, self.agent1, self.agent2)
+    self.agent4.updateState(self.agent3, self.ball, self.agent1, self.agent2)
+    
     self.delayScreen = DelayScreen()
+
   def newMatch(self):
     ball_vx = self.np_random.uniform(low=-20, high=20)
     ball_vy = self.np_random.uniform(low=10, high=25)
     self.ball = Particle(0, REF_W/4, ball_vx, ball_vy, 0.5, c=BALL_COLOR);
     self.delayScreen.reset()
+
   def step(self):
     """ main game loop """
-
     self.betweenGameControl()
-    self.agent_left.update()
-    self.agent_right.update()
-
+    # Agent 1
+    self.agent1.update()
+    if (self.agent1.isColliding(self.agent2)):
+      self.agent1.bounce(self.agent2)
+    # Agent 2
+    self.agent2.update()
+    if (self.agent2.isColliding(self.agent1)):
+      self.agent2.bounce(self.agent1)
+    # Agent 3
+    self.agent3.update()
+    if (self.agent3.isColliding(self.agent4)):
+      self.agent3.bounce(self.agent4)
+    # Agent 4
+    self.agent4.update()
+    if (self.agent4.isColliding(self.agent3)):
+      self.agent4.bounce(self.agent3)
+    
     if self.delayScreen.status():
       self.ball.applyAcceleration(0, GRAVITY)
       self.ball.limitSpeed(0, MAX_BALL_SPEED)
       self.ball.move()
 
-    if (self.ball.isColliding(self.agent_left)):
-      self.ball.bounce(self.agent_left)
-    if (self.ball.isColliding(self.agent_right)):
-      self.ball.bounce(self.agent_right)
+    if (self.ball.isColliding(self.agent1)):
+      self.ball.bounce(self.agent1)
+    if (self.ball.isColliding(self.agent2)):
+      self.ball.bounce(self.agent2)
+    if (self.ball.isColliding(self.agent3)):
+      self.ball.bounce(self.agent3)
+    if (self.ball.isColliding(self.agent4)):
+      self.ball.bounce(self.agent4)
     if (self.ball.isColliding(self.fenceStub)):
       self.ball.bounce(self.fenceStub)
 
-    # negated, since we want reward to be from the persepctive of right agent being trained.
+    # negated, since we want reward to be from the perspective of right agent being trained.
     result = -self.ball.checkEdges()
 
     if (result != 0):
       self.newMatch() # not reset, but after a point is scored
-      if result < 0: # baseline agent won
-        self.agent_left.emotion = "happy"
-        self.agent_right.emotion = "sad"
-        self.agent_right.life -= 1
-      else:
-        self.agent_left.emotion = "sad"
-        self.agent_right.emotion = "happy"
-        self.agent_left.life -= 1
+      if result < 0: # baseline agent won (team left won)
+        self.agent3.emotion = "happy"
+        self.agent4.emotion = "happy"
+        self.agent1.emotion = "sad"
+        self.agent2.emotion = "sad"
+        self.agent1.life -= 1
+        self.agent2.life -= 1
+      else: # team right won
+        self.agent3.emotion = "sad"
+        self.agent4.emotion = "sad"
+        self.agent1.emotion = "happy"
+        self.agent2.emotion = "happy"
+        self.agent3.life -= 1
+        self.agent4.life -= 1
       return result
 
     # update internal states (the last thing to do)
-    self.agent_left.updateState(self.ball, self.agent_right)
-    self.agent_right.updateState(self.ball, self.agent_left)
-
+    self.agent1.updateState(self.agent2, self.ball, self.agent3, self.agent4)
+    self.agent2.updateState(self.agent1, self.ball, self.agent3, self.agent4)
+    self.agent3.updateState(self.agent4, self.ball, self.agent1, self.agent2)
+    self.agent4.updateState(self.agent3, self.ball, self.agent1, self.agent2)
+    
     return result
+  
   def display(self, canvas):
     # background color
     # if PIXEL_MODE is True, canvas is an RGB array.
@@ -607,13 +697,16 @@ class Game:
     canvas = create_canvas(canvas, c=BACKGROUND_COLOR)
     canvas = self.fence.display(canvas)
     canvas = self.fenceStub.display(canvas)
-    canvas = self.agent_left.display(canvas, self.ball.x, self.ball.y)
-    canvas = self.agent_right.display(canvas, self.ball.x, self.ball.y)
+    canvas = self.agent1.display(canvas, self.ball.x, self.ball.y)
+    canvas = self.agent2.display(canvas, self.ball.x, self.ball.y)
+    canvas = self.agent3.display(canvas, self.ball.x, self.ball.y)
+    canvas = self.agent4.display(canvas, self.ball.x, self.ball.y)
     canvas = self.ball.display(canvas)
     canvas = self.ground.display(canvas)
     return canvas
+
   def betweenGameControl(self):
-    agent = [self.agent_left, self.agent_right]
+    agent = [self.agent1, self.agent2, self.agent3, self.agent4]
     if (self.delayScreen.life > 0):
       pass
       '''
@@ -624,6 +717,8 @@ class Game:
     else:
       agent[0].emotion = "happy"
       agent[1].emotion = "happy"
+      agent[2].emotion = "happy"
+      agent[3].emotion = "happy"
 
 class SlimeVolleyEnv(gym.Env):
   """
@@ -691,7 +786,7 @@ class SlimeVolleyEnv(gym.Env):
 
   from_pixels = False
   atari_mode = False
-  survival_bonus = False # Depreciated: augment reward, easier to train
+  survival_bonus = True # Depreciated: augment reward, easier to train
   multiagent = True # optional args anyways
 
   def __init__(self):
@@ -733,19 +828,21 @@ class SlimeVolleyEnv(gym.Env):
     self.previous_rgbarray = None
 
     self.game = Game()
-    self.ale = self.game.agent_right # for compatibility for some models that need the self.ale.lives() function
+    self.ale = self.game.agent1 # for compatibility for some models that need the self.ale.lives() function
 
     self.policy = BaselinePolicy() # the “bad guy”
 
     self.viewer = None
 
     # another avenue to override the built-in AI's action, going past many env wraps:
-    self.otherAction = None
+    self.action2 = None
+    self.action3 = None
+    self.action4 = None
 
   def seed(self, seed=None):
     self.np_random, seed = seeding.np_random(seed)
     self.game = Game(np_random=self.np_random)
-    self.ale = self.game.agent_right # for compatibility for some models that need the self.ale.lives() function
+    self.ale = self.game.agent1 # for compatibility for some models that need the self.ale.lives() function
     return [seed]
 
   def getObs(self):
@@ -753,8 +850,9 @@ class SlimeVolleyEnv(gym.Env):
       obs = self.render(mode='state')
       self.canvas = obs
     else:
-      obs = self.game.agent_right.getObservation()
-    return obs
+      obs1 = self.game.agent1.getObservation()
+      obs2 = self.game.agent2.getObservation()
+    return obs1, obs2
 
   def discreteToBox(self, n):
     # convert discrete action n into the actual triplet action
@@ -764,7 +862,7 @@ class SlimeVolleyEnv(gym.Env):
     assert (int(n) == n) and (n >= 0) and (n < 6)
     return self.action_table[n]
 
-  def step(self, action, otherAction=None):
+  def step(self, action1, action2=None, action3=None, action4=None):
     """
     baseAction is only used if multiagent mode is True
     note: although the action space is multi-binary, float vectors
@@ -773,48 +871,72 @@ class SlimeVolleyEnv(gym.Env):
     done = False
     self.t += 1
 
-    if self.otherAction is not None:
-      otherAction = self.otherAction
+    if self.action2 is not None:
+      action2 = self.action2
+
+    if self.action3 is not None:
+      action3 = self.action3
+
+    if self.action4 is not None:
+      action4 = self.action4
 
     if self.atari_mode:
-      action = self.discreteToBox(action)
-      if otherAction is not None:
-        otherAction = self.discreteToBox(otherAction)
+      action1 = self.discreteToBox(action1)
+      if self.action2 is not None:
+        action2 = self.discreteToBox(action2)
+      if action3 is not None:
+        action3 = self.discreteToBox(action3)
+      if self.action4 is not None:
+        action4 = self.discreteToBox(action4)
 
-    if otherAction is None: # override baseline policy
-      obs = self.game.agent_left.getObservation()
-      otherAction = self.policy.predict(obs)
-    self.game.agent_left.setAction(otherAction)
-    self.game.agent_right.setAction(action) # external agent is agent_right
+    if isinstance(self.policy, BaselinePolicy):
+
+      if action3 is None: # override baseline policy
+        obs = self.game.agent3.getObservation()
+        action3 = self.policy.predict(obs)
+      if action4 is None: # override baseline policy
+        obs = self.game.agent4.getObservation()
+        action4 = self.policy.predict(obs)
+    else:
+      if action3 is None: # override baseline policy
+        obs3 = self.game.agent3.getObservation()
+        obs4 = self.game.agent4.getObservation()
+        action3, action4 = self.policy.predict(obs3, obs4)
+
+    self.game.agent3.setAction(action3)
+    self.game.agent4.setAction(action4)
+    self.game.agent1.setAction(action1) # external agent is agent_right
+    self.game.agent2.setAction(action2) # external agent is agent_right
 
     reward = self.game.step()
 
-    obs = self.getObs()
+    obs1, obs2 = self.getObs()
+    obs_arr = [obs1, obs2]
 
     if self.t >= self.t_limit:
       done = True
 
-    if self.game.agent_left.life <= 0 or self.game.agent_right.life <= 0:
+    if self.game.agent3.life <= 0 or self.game.agent1.life <= 0:
       done = True
 
     otherObs = None
     if self.multiagent:
       if self.from_pixels:
-        otherObs = cv2.flip(obs, 1) # horizontal flip
+        otherObs = cv2.flip(obs1, 1) # horizontal flip
       else:
-        otherObs = self.game.agent_left.getObservation()
+        otherObs = self.game.agent3.getObservation()
 
     info = {
-      'ale.lives': self.game.agent_right.lives(),
-      'ale.otherLives': self.game.agent_left.lives(),
+      'ale.lives': self.game.agent1.lives(),
+      'ale.otherLives': self.game.agent3.lives(),
       'otherObs': otherObs,
-      'state': self.game.agent_right.getObservation(),
-      'otherState': self.game.agent_left.getObservation(),
+      'state': self.game.agent1.getObservation(),
+      'otherState': self.game.agent3.getObservation(),
     }
 
     if self.survival_bonus:
-      return obs, reward+0.01, done, info
-    return obs, reward, done, info
+      return obs_arr, reward+0.01, done, info
+    return obs_arr, reward, done, info
 
   def init_game_state(self):
     self.t = 0
@@ -954,12 +1076,14 @@ def multiagent_rollout(env, policy_right, policy_left, render_mode=False):
 
   while not done:
 
-    action_right = policy_right.predict(obs_right)
-    action_left = policy_left.predict(obs_left)
+    action1 = policy_right.predict(obs_right)
+    action2 = policy_right.predict(obs_right)
+    action3 = policy_left.predict(obs_left)
+    action4 = policy_left.predict(obs_left)
 
     # uses a 2nd (optional) parameter for step to put in the other action
     # and returns the other observation in the 4th optional "info" param in gym's step()
-    obs_right, reward, done, info = env.step(action_right, action_left)
+    obs_right, reward, done, info = env.step(action1, action2, action3, action4)
     obs_left = info['otherObs']
 
     total_reward += reward
@@ -1029,45 +1153,75 @@ if __name__=="__main__":
 
   Humans can override controls:
 
-  left Agent:
+  (blue) Agent 3:
   W - Jump
   A - Left
   D - Right
 
-  right Agent:
+  (purple) Agent 4:
+  T - Jump
+  F - Left
+  H - Right
+ 
+  (yellow) Agent 1:
   Up Arrow, Left Arrow, Right Arrow
+
+  (orange) Agent 2:
+  I - Jump
+  J - Left
+  L - Right
   """
 
   if RENDER_MODE:
     from pyglet.window import key
     from time import sleep
 
-  manualAction = [0, 0, 0] # forward, backward, jump
-  otherManualAction = [0, 0, 0]
-  manualMode = False
-  otherManualMode = False
+  manualAction1 = [0, 0, 0] # forward, backward, jump
+  manualAction2 = [0, 0, 0]
+  manualAction3 = [0, 0, 0]
+  manualAction4 = [0, 0, 0]
+  manualMode1 = False
+  manualMode2 = False
+  manualMode3 = False
+  manualMode4 = False
 
   # taken from https://github.com/openai/gym/blob/master/gym/envs/box2d/car_racing.py
   def key_press(k, mod):
-    global manualMode, manualAction, otherManualMode, otherManualAction
-    if k == key.LEFT:  manualAction[0] = 1
-    if k == key.RIGHT: manualAction[1] = 1
-    if k == key.UP:    manualAction[2] = 1
-    if (k == key.LEFT or k == key.RIGHT or k == key.UP): manualMode = True
+    global manualMode1, manualMode2, manualMode3, manualMode4, manualAction1, manualAction2, manualAction3, manualAction4
+    if k == key.LEFT:  manualAction1[0] = 1
+    if k == key.RIGHT: manualAction1[1] = 1
+    if k == key.UP:    manualAction1[2] = 1
+    if (k == key.LEFT or k == key.RIGHT or k == key.UP): manualMode1 = True
 
-    if k == key.D:     otherManualAction[0] = 1
-    if k == key.A:     otherManualAction[1] = 1
-    if k == key.W:     otherManualAction[2] = 1
-    if (k == key.D or k == key.A or k == key.W): otherManualMode = True
+    if k == key.J:  manualAction2[0] = 1
+    if k == key.L:  manualAction2[1] = 1
+    if k == key.I:  manualAction2[2] = 1
+    if (k == key.J or k == key.L or k == key.I): manualMode2 = True
+
+    if k == key.D:  manualAction3[0] = 1
+    if k == key.A:  manualAction3[1] = 1
+    if k == key.W:  manualAction3[2] = 1
+    if (k == key.D or k == key.A or k == key.W): manualMode3 = True
+
+    if k == key.B:  manualAction4[0] = 1
+    if k == key.C:  manualAction4[1] = 1
+    if k == key.F:  manualAction4[2] = 1
+    if (k == key.B or k == key.C or k == key.F): manualMode4 = True
 
   def key_release(k, mod):
-    global manualMode, manualAction, otherManualMode, otherManualAction
-    if k == key.LEFT:  manualAction[0] = 0
-    if k == key.RIGHT: manualAction[1] = 0
-    if k == key.UP:    manualAction[2] = 0
-    if k == key.D:     otherManualAction[0] = 0
-    if k == key.A:     otherManualAction[1] = 0
-    if k == key.W:     otherManualAction[2] = 0
+    global manualMode1, manualMode2, manualMode3, manualMode4, manualAction1, manualAction2, manualAction3, manualAction4
+    if k == key.LEFT:  manualAction1[0] = 0
+    if k == key.RIGHT: manualAction1[1] = 0
+    if k == key.UP:    manualAction1[2] = 0
+    if k == key.J:     manualAction2[0] = 0
+    if k == key.L:     manualAction2[1] = 0
+    if k == key.I:     manualAction2[2] = 0
+    if k == key.D:     manualAction3[0] = 0
+    if k == key.A:     manualAction3[1] = 0
+    if k == key.W:     manualAction3[2] = 0
+    if k == key.B:     manualAction4[0] = 0
+    if k == key.C:     manualAction4[1] = 0
+    if k == key.F:     manualAction4[2] = 0
 
   policy = BaselinePolicy() # defaults to use RNN Baseline for player
 
@@ -1084,27 +1238,44 @@ if __name__=="__main__":
 
   steps = 0
   total_reward = 0
-  action = np.array([0, 0, 0])
+  action1 = np.array([0, 0, 0])
+  action2 = np.array([0, 0, 0])
+  action3 = np.array([0, 0, 0])
+  action4 = np.array([0, 0, 0])
 
   done = False
 
   while not done:
 
-    if manualMode: # override with keyboard
-      action = manualAction
+    if manualMode1: # override with keyboard
+      action1 = manualAction1
     else:
-      action = policy.predict(obs)
+      action1 = policy.predict(obs) 
+    
+    if manualMode2: # override with keyboard
+      action2 = manualAction2
+      obs, reward, done, _ = env.step(action1, action2, action3, action4) 
+    else:
+      obs, reward, done, _ = env.step(action1)
 
-    if otherManualMode:
-      otherAction = otherManualAction
-      obs, reward, done, _ = env.step(action, otherAction)
+    if manualMode3:
+      action3 = manualAction3
+      obs, reward, done, _ = env.step(action1, action2, action3, action4) 
     else:
-      obs, reward, done, _ = env.step(action)
+      obs, reward, done, _ = env.step(action1)
+      
+    if manualMode4:
+      action4 = manualAction4
+      obs, reward, done, _ = env.step(action1, action2, action3, action4) 
+    else:
+      obs, reward, done, _ = env.step(action1)
 
     if reward > 0 or reward < 0:
       print("reward", reward)
-      manualMode = False
-      otherManualMode = False
+      manualMode1 = False
+      manualMode2 = False
+      manualMode3 = False
+      manualMode4 = False
 
     total_reward += reward
 
@@ -1113,7 +1284,7 @@ if __name__=="__main__":
       sleep(0.01)
 
     # make the game go slower for human players to be fair to humans.
-    if (manualMode or otherManualMode):
+    if (manualMode1 or manualMode2 or manualMode3 or manualMode4):
       if PIXEL_MODE:
         sleep(0.01)
       else:

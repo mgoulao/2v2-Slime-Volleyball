@@ -1,59 +1,54 @@
 import sys
-sys.path.append('../slimevolleygymrepo')
 
-import os
-from stable_baselines3.common.callbacks import EvalCallback
+sys.path.append('../slimevolleygymrepo')
 
 import slimevolleygym 
 
-BEST_THRESHOLD = 0.5 # must achieve a mean score above this to replace prev best self
-
+BEST_THRESHOLD = 0.5
 
 class SlimeVolleySelfPlayEnv(slimevolleygym.SlimeVolleyEnv):
   # wrapper over the normal single player env, but loads the best self play model
-  def __init__(self, logdir):
+  def __init__(self, team, renderMode, selfplay):
     super(SlimeVolleySelfPlayEnv, self).__init__()
-    self.logdir = logdir
-    self.policy = self
-    self.best_model = None
-    self.best_model_filename = None
-  def predict(self, obs): # the policy
-    if self.best_model is None:
-      return self.action_space.sample() # return a random action
+    self.Team = team
+    self.selfplay = selfplay
+    if selfplay:
+      self.policy = self
+    self.selfplay_opponent = None
+    self.renderMode = renderMode
+
+  def predict(self, obs1, obs2): # the policy
+    if self.selfplay_opponent is None:
+      return self.action_space.sample(), self.action_space.sample() # return a random action
     else:
-      action, _ = self.best_model.predict(obs)
-      return action
+      action1, action2 = self.selfplay_opponent.select_action(obs1, obs2)
+      return action1, action2
+
   def reset(self):
-    # load model if it's there
-    modellist = [f for f in os.listdir(self.logdir) if f.startswith("history")]
-    modellist.sort()
-    if len(modellist) > 0:
-      filename = os.path.join(self.logdir, modellist[-1]) # the latest best model
-      if filename != self.best_model_filename:
-        print("loading model: ", filename)
-        self.best_model_filename = filename
-        if self.best_model is not None:
-          del self.best_model
-        self.best_model = PPO1.load(filename, env=self)
+    bestSaveExists = self.Team.bestSaveExists()
+    if bestSaveExists and self.selfplay_opponent is None and self.selfplay:
+      print("SELFPLAY: Best Model Found!")
+      self.load_opponent_best_model()
+      
     return super(SlimeVolleySelfPlayEnv, self).reset()
 
-class SelfPlayCallback(EvalCallback):
-  # hacked it to only save new version of best model if beats prev self by BEST_THRESHOLD score
-  # after saving model, resets the best score to be BEST_THRESHOLD
-  def __init__(self, *args, **kwargs):
-    super(SelfPlayCallback, self).__init__(*args, **kwargs)
-    self.best_model_save_path = kwargs.get('best_model_save_path', './logs')
-    self.log_path = kwargs.get("log_path", './logs')
-    self.best_mean_reward = BEST_THRESHOLD
-    self.generation = 0
-  def _on_step(self) -> bool:
-    result = super(SelfPlayCallback, self)._on_step()
-    if result and self.best_mean_reward > BEST_THRESHOLD:
-      self.generation += 1
-      print("SELFPLAY: mean_reward achieved:", self.best_mean_reward)
-      print("SELFPLAY: new best model, bumping up generation to", self.generation)
-      source_file = os.path.join(self.best_model_save_path, "best_model.zip")
-      backup_file = os.path.join(self.best_model_save_path, "history_"+str(self.generation).zfill(8)+".zip")
-      copyfile(source_file, backup_file)
-      self.best_mean_reward = BEST_THRESHOLD
-    return result
+  def load_opponent_best_model(self):
+    self.policy = self
+    if self.selfplay_opponent is not None:
+      del self.selfplay_opponent
+    self.selfplay_opponent = self.Team(self)
+    print("SELFPLAY: ", end="")
+    self.selfplay_opponent.loadBestModel()
+  
+  def step(self, action_1, action_2):
+    if self.renderMode:
+      self.render()
+    return super(SlimeVolleySelfPlayEnv, self).step(action_1, action_2)
+
+  def checkpoint(self, agent, mean_reward):
+    if mean_reward > BEST_THRESHOLD and self.selfplay:
+      print("--------------------------------------------------------------------------------------------")
+      print("SELFPLAY: mean_reward achieved:", mean_reward)
+      agent.saveBestModel()
+      self.load_opponent_best_model()
+      print("--------------------------------------------------------------------------------------------")
