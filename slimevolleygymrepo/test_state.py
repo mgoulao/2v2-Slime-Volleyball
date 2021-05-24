@@ -51,10 +51,10 @@ if __name__=="__main__":
   manualAction2 = [0, 0, 0]
   manualAction3 = [0, 0, 0]
   manualAction4 = [0, 0, 0]
-  manualMode1 = True #False 
-  manualMode2 = True #False 
-  manualMode3 = True #False
-  manualMode4 = True #False 
+  manualMode1 = False 
+  manualMode2 = False 
+  manualMode3 = False
+  manualMode4 = False 
   
   # taken from https://github.com/openai/gym/blob/master/gym/envs/box2d/car_racing.py
   def key_press(k, mod):
@@ -140,10 +140,10 @@ if __name__=="__main__":
       obs, reward, done, _ = env.step(action1)
 
     if reward > 0 or reward < 0:
-      manualMode1 = True #False
-      manualMode2 = True #False
-      manualMode3 = True #False
-      manualMode4 = True #False
+      manualMode1 = False
+      manualMode2 = False
+      manualMode3 = False
+      manualMode4 = False
 
     total_reward += reward
 

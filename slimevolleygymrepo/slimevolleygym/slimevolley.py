@@ -25,7 +25,7 @@ from game_settings import REF_W, REF_H, REF_U, REF_WALL_WIDTH, REF_WALL_HEIGHT, 
   MAX_BALL_SPEED, TIMESTEP, NUDGE, FRICTION, INIT_DELAY_FRAMES, GRAVITY, MAXLIVES, WINDOW_WIDTH, WINDOW_HEIGHT, FACTOR, \
   PIXEL_MODE, PIXEL_SCALE, PIXEL_WIDTH, PIXEL_HEIGHT, RENDER_MODE
 
-from roles import Attacker, Defender, Vanilla
+from roles import Attacker, Defender, Top, Bottom, Vanilla
 
 np.set_printoptions(threshold=20, precision=3, suppress=True, linewidth=200)
 
@@ -608,8 +608,8 @@ class Game:
     ball_vx = self.np_random.uniform(low=-20, high=20)
     ball_vy = self.np_random.uniform(low=10, high=25)
     self.ball = Particle(0, REF_W/4, ball_vx, ball_vy, 0.5, c=BALL_COLOR)
-    self.agent1 = Agent(1, REF_W / 6, 1.5, c=AGENT1_COLOR, role=Attacker())
-    self.agent2 = Agent(1, REF_W/3, 1.5, c=AGENT2_COLOR, role=Defender())
+    self.agent1 = Agent(1, REF_W / 6, 1.5, c=AGENT1_COLOR, role=Bottom())
+    self.agent2 = Agent(1, REF_W/3, 1.5, c=AGENT2_COLOR, role=Top())
     self.agent3 = Agent(-1, -REF_W/6, 1.5, c=AGENT3_COLOR, role=Vanilla())
     self.agent4 = Agent(-1, -REF_W/3, 1.5, c=AGENT4_COLOR, role=Vanilla())
     self.agent1.updateState(self.agent2, self.ball, self.agent3, self.agent4)
