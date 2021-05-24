@@ -648,7 +648,7 @@ class Game:
     if self.delayScreen.status():
       self.ball.applyAcceleration(0, GRAVITY)
       self.ball.limitSpeed(0, MAX_BALL_SPEED)
-      #self.ball.move()
+      self.ball.move()
 
     if (self.ball.isColliding(self.agent1)):
       self.ball.bounce(self.agent1)
