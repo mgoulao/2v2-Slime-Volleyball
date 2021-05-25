@@ -337,20 +337,21 @@ class Top(TB):
         if px == tpx:
             if nx == tnx: # Reward + for remaining
                 return reward * 1.5
+            else:
+                return reward
         
         # Agent was not on top of teammate
         else:         
             if ndist2_b == 4: # Agent touches ball (distance = 1.5 + 0.5), Punish +
                 return reward*0.3
             
-            if pdist2_a > ndist2_a: # Agent is getting closer to teammate
-                if nx == tnx: # Agent achieved desired position
-                    return reward*1.5
-                return reward*1.2
-            
-            # Punish if agent is getting further away from teammate
-            else:
-                return reward * 0.5
+            else:         
+                if pdist2_a > ndist2_a: # Agent is getting closer to teammate
+                    return reward*1.2
+
+                # Punish if agent is getting further away from teammate
+                else:
+                    return reward * 0.5
 
     def switch(self, agent):
         del agent.role
