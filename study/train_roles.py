@@ -14,7 +14,7 @@ import argparse
 from agents_wraps.ppo_roles import ROLES_TEAM
 from selfplay import SlimeVolleySelfPlayEnv
 
-RENDER_MODE = False
+RENDER_MODE = True
 SELFPLAY = True
 
 if __name__=="__main__":

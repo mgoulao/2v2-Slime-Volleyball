@@ -239,9 +239,10 @@ class TB(Role):
     def reward(self, *args):
         pass
 
-    #@abstractmethod
-    def potential(self, *args):
-        pass
+    def potential(self, x, y, ox, oy):
+        dx = ox - x
+        dy = oy - y
+        return dx*dx+dy*dy
 
     @abstractmethod
     def switch(self, agent):
@@ -258,11 +259,6 @@ class TB(Role):
 class Bottom(TB):
     def actions(self):
         pass
-
-    def distance2(x, y, ox, oy):
-        dx = ox - x
-        dy = oy - y
-        return dx*dx+dy*dy
 
     def reward(self, *args):
         prev_state = args[0]
@@ -283,8 +279,8 @@ class Bottom(TB):
         bny = state[9]
 
         # Distance between Bottom and Ball
-        pdist2 = self.distance2(px, py, bpx, bpy)
-        ndist2 = self.distance2(nx, ny, bnx, bny)
+        pdist2 = self.potential(px, py, bpx, bpy)
+        ndist2 = self.potential(nx, ny, bnx, bny)
 
         # Reward agent if it moved closer to the ball
         if pdist2 > ndist2:
@@ -305,11 +301,6 @@ class Bottom(TB):
 class Top(TB):
     def actions(self):
         pass
-
-    def distance2(px, py, bx, by):
-        dx = bx - px
-        dy = by - py
-        return dx*dx+dy*dy
 
     def reward(self, *args):
         prev_state = args[0]
@@ -336,11 +327,11 @@ class Top(TB):
         tny = state[5]
 
         # distance between Top and Bottom
-        pdist2_a = self.distance2(px, py, tpx, tpy)
-        ndist2_a = self.distance2(nx, ny, tnx, tny)
+        pdist2_a = self.potential(px, py, tpx, tpy)
+        ndist2_a = self.potential(nx, ny, tnx, tny)
         # distance between Top and ball
-        pdist2_b = self.distance2(px, py, bpx, bpy)
-        ndist2_b = self.distance2(nx, ny, bnx, bny)
+        pdist2_b = self.potential(px, py, bpx, bpy)
+        ndist2_b = self.potential(nx, ny, bnx, bny)
 
         # Agent was already on top of teammate (px=tpx)
         if px == tpx:
