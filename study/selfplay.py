@@ -4,8 +4,7 @@ sys.path.append('../slimevolleygymrepo')
 
 import slimevolleygym 
 
-BEST_THRESHOLD = 8
-
+BEST_THRESHOLD = 7.5
 class SlimeVolleySelfPlayEnv(slimevolleygym.SlimeVolleyEnv):
   # wrapper over the normal single player env, but loads the best self play model
   def __init__(self, team, renderMode, selfplay):
