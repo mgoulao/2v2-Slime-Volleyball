@@ -71,10 +71,10 @@ def rollout(env, policy_1, policy_2, render_mode=False):
 
     total_reward += reward
 
-    if not policy_1.agent1 == None and not policy_1.agent1.roles:
+    if not policy_1.agent1 == None and hasattr(policy_1.agent1, 'roles'):
         policy_1.decide_role(obs_1, obs_2)
     
-    if not policy_2.agent1 == None and not policy_2.agent1.roles:
+    if not policy_2.agent1 == None and hasattr(policy_2.agent1, 'roles'):
         policy_2.decide_role(obs_1, obs_2)
 
   return total_reward
