@@ -282,17 +282,17 @@ class Bottom(TB):
         pdist2 = self.potential(px, py, bpx, bpy)
         ndist2 = self.potential(nx, ny, bnx, bny)
 
-        # Reward agent if it moved closer to the ball
-        if pdist2 > ndist2:
-            reward = reward * 1.5
-        else:
-            reward = reward * 0.5
-
         # Punish agent if it touches the ball
         if ndist2 < 4:
-            return reward * 0.2 
+            reward = reward * (-0.8)
         else:
-            return reward
+            reward = reward
+        
+        # Reward agent if it moved closer to the ball
+        if pdist2 > ndist2:
+            return reward * 1.5
+        else:
+            return reward * (-0.5)
 
     def switch(self, agent):
         agent.role = Top()
@@ -336,22 +336,21 @@ class Top(TB):
         # Agent was already on top of teammate (px=tpx)
         if px == tpx:
             if nx == tnx: # Reward + for remaining
-                return reward * 1.5
+                return reward * 1.8
             else:
-                return reward
+                return reward * (-0.5)
         
         # Agent was not on top of teammate
         else:         
             if ndist2_b == 4: # Agent touches ball (distance = 1.5 + 0.5), Punish +
-                return reward*0.3
+                reward = reward * (-0.8)
+               
+            if pdist2_a > ndist2_a: # Agent is getting closer to teammate
+                return reward * 1.2
             
-            else:         
-                if pdist2_a > ndist2_a: # Agent is getting closer to teammate
-                    return reward*1.2
-
-                # Punish if agent is getting further away from teammate
-                else:
-                    return reward * 0.5
+            # Punish if agent is getting further away from teammate
+            else:
+                return reward * (-0.5)
 
     def switch(self, agent):
         del agent.role
