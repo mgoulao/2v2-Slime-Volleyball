@@ -282,17 +282,17 @@ class Bottom(TB):
         pdist2 = self.potential(px, py, bpx, bpy)
         ndist2 = self.potential(nx, ny, bnx, bny)
 
-        # Punish agent if it touches the ball
-        if ndist2 < 4:
-            reward = reward * (-0.8)
-        else:
-            reward = reward
-        
         # Reward agent if it moved closer to the ball
         if pdist2 > ndist2:
             return reward * 1.5
         else:
-            return reward * (-0.5)
+           return reward * (-0.5)
+
+        # Punish if agent jumps
+        # if py < ny:
+        #     return reward * (-0.8)
+        # else:
+        #     return reward
 
     def switch(self, agent):
         agent.role = Top()
