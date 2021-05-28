@@ -263,7 +263,7 @@ class Bottom(TB):
     def reward(self, *args):
         prev_state = args[0]
         state = args[1]
-        reward = args[2]
+        reward = args[2] + 0.3
 
         # previous state
         px = prev_state[0]
@@ -305,7 +305,7 @@ class Top(TB):
     def reward(self, *args):
         prev_state = args[0]
         state = args[1]
-        reward = args[2]
+        reward = args[2] + 0.3
 
         # previous state
         px = prev_state[0]
