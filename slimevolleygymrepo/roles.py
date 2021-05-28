@@ -129,14 +129,14 @@ class Attacker(AD):
 
         # Reward agents if the actions are according to role TODO: Check github
         if self.potential(px, py, bpx, bpy) > self.potential(nx, ny, bnx, bny):
-            reward = reward * 3
+            reward = (reward + 0.3) * 3
 
         # If ball is getting closer to teammate, reward should be higher for going away from the ball
-        d = self.__step(sqrt(2) * SCALED_REF_W/4, nx, ny, bnx, bny)
         dt = self.__step(sqrt(2) * SCALED_REF_W/4, tnx, tny, bnx, bny)
-        if dt < 0.5 or d >= 0.5:
+        db = self.__step(SCALED_REF_W, tnx, 0, bnx, 0)
+        if dt < 0.5 and db <= 0.49:
             if self.potential(px, py, bpx, bpy) < self.potential(nx, py, bnx, bny):
-                reward = reward * 1.5
+                reward = (reward + 0.1) * 1.5
             else:
                 reward = reward * -0.1
         else:
@@ -201,16 +201,17 @@ class Defender(AD):
         # # teammates next state
         tnx = state[4]
         tny = state[5]
+
         # Reward agents if the actions are according to role
         if self.potential(px, py, bpx, bpy) < self.potential(nx, ny, bnx, bny):
-            reward = reward * 0.9
+            reward = reward + 0.01
 
         # If ball is moving away from teammate, reward should be higher for moving closer to ball
-        d = self.__step(sqrt(2) * SCALED_REF_W/4, nx, ny, bnx, bny)
         dt = self.__step(sqrt(2) * SCALED_REF_W/4, tnx, tny, bnx, bny)
-        if dt >= 0.5 or d < 0.5:
+        db = self.__step(SCALED_REF_W, tnx, 0, bnx, 0)
+        if dt >= 0.5 and db <= 0.49:
             if self.potential(px, py, bpx, bpy) > self.potential(nx, py, bnx, bny):
-                reward = reward * 1.5
+                reward = (reward + 0.1) * 1.5
             else:
                 reward = reward * -0.1
         else:
