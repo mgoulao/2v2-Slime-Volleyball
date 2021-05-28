@@ -40,7 +40,9 @@ To evaluate different agents against each other we use the script `eval_agents.p
 Options:
 * baseline
 * ppo
-* ppo_*
+* ppo_ad
+* ppo_top_bot
+* ppo_leader
 
 ```shell
 $ python eval_agents.py --left=baseline --right=ppo
