@@ -2,6 +2,8 @@ from abc import abstractmethod, ABC
 from math import sqrt
 from game_settings import REF_W
 
+SCALED_REF_W = REF_W / 10
+
 class Role(ABC):
     @abstractmethod
     # Available actions to role
@@ -92,11 +94,14 @@ class AD(Role):
 
 
 class Attacker(AD):
+    def name(self):
+        return "attacker"
+
     def actions(self):
         pass
 
     def __step(self, threshold, x1, y1, x2, y2):
-        return (threshold - self.potential(x1, y1, x2, y2)) / threshold
+        return self.potential(x1, y1, x2, y2) / threshold
 
     def reward(self, *args):
         prev_state = args[0]
@@ -124,25 +129,29 @@ class Attacker(AD):
 
         # Reward agents if the actions are according to role TODO: Check github
         if self.potential(px, py, bpx, bpy) > self.potential(nx, ny, bnx, bny):
-            # If ball is getting closer to teammate, reward should be higher for standing still
-            d1 = self.__step(REF_W/2, tpx, tpy, bnx, bny)
-            d2 = self.__step(REF_W/2, tnx, tny, bnx, bny)
-            if d1 < d2 < 0.2:
-                if px == nx and py == ny:
-                    reward = reward * 1.2
-                else:
-                    reward = reward * 0.5
+            reward = (reward + 0.3) * 3
+
+        # If ball is getting closer to teammate, reward should be higher for going away from the ball
+        dt = self.__step(sqrt(2) * SCALED_REF_W/4, tnx, tny, bnx, bny)
+        db = self.__step(SCALED_REF_W, tnx, 0, bnx, 0)
+        if dt < 0.5 and db <= 0.49:
+            if self.potential(px, py, bpx, bpy) < self.potential(nx, py, bnx, bny):
+                reward = (reward + 0.1) * 1.5
             else:
-                reward = reward
+                reward = reward * -0.1
         else:
-            reward = reward * 1.5
+            reward = reward
 
         # Reward agents if theyre not close together
-        if self.potential(nx, ny, tpx, tpy) > REF_W/6:
-            return reward
+        ad = self.__step(SCALED_REF_W/2, nx, 0, tpx, 0)
+        if 1/4 < ad < 3/4:
+            return reward * 1.2
         else:
-            step = self.__step(REF_W/6, nx, ny, tpx, tpy)
-            return reward * (1 - step)
+            if ad <= 0.5:
+                step = ad + 0.5
+            else:
+                step = 1 - ad + 0.5
+            return reward * max(0.3, step)
 
     def switch(self, agent):
         agent.role = Defender()
@@ -154,18 +163,20 @@ class Attacker(AD):
         agent_pos = [state[0], state[1]]
         ball_pos = [state[8], state[9]]
         teammate_pos = [state[4], state[5]]
-        teammate_info  = teammate.role.info(teammate_pos, ball_pos)
+        teammate_info = teammate.role.info(teammate_pos, ball_pos)
 
         if self.info(agent_pos, ball_pos) > teammate_info:
             self.switch(agent)
 
 
 class Defender(AD):
+    def name(self):
+        return "defender"
     def actions(self):
         pass
 
     def __step(self, threshold, x1, y1, x2, y2):
-        return (threshold - self.potential(x1, y1, x2, y2)) / threshold
+        return self.potential(x1, y1, x2, y2) / threshold
 
     def reward(self, *args):
         prev_state = args[0]
@@ -190,30 +201,34 @@ class Defender(AD):
         # # teammates next state
         tnx = state[4]
         tny = state[5]
+
         # Reward agents if the actions are according to role
-        if self.potential(px, py, bpx, bpy) > self.potential(nx, ny, bnx, bny):
-            reward = reward * 1.5
-        else:
-            # If ball is moving away from teammate, reward should be higher for standing still
-            d1 = self.__step(REF_W / 2, tpx, tpy, bnx, bny)
-            d2 = self.__step(REF_W / 2, tnx, tny, bnx, bny)
-            if d1 > d2 >= 0.2:
-                if px == nx and py == ny:
-                    reward = reward * 1.2
-                else:
-                    reward = reward * 0.5
+        if self.potential(px, py, bpx, bpy) < self.potential(nx, ny, bnx, bny):
+            reward = reward + 0.01
+
+        # If ball is moving away from teammate, reward should be higher for moving closer to ball
+        dt = self.__step(sqrt(2) * SCALED_REF_W/4, tnx, tny, bnx, bny)
+        db = self.__step(SCALED_REF_W, tnx, 0, bnx, 0)
+        if dt >= 0.5 and db <= 0.49:
+            if self.potential(px, py, bpx, bpy) > self.potential(nx, py, bnx, bny):
+                reward = (reward + 0.1) * 1.5
             else:
-                reward = reward
+                reward = reward * -0.1
+        else:
+            reward = reward
 
         # Reward agents if theyre not close together
-        if self.potential(nx, ny, tpx, tpy) > REF_W / 6:
-            return reward
+        ad = self.__step(SCALED_REF_W/2, nx, 0, tpx, 0)
+        if 1/4 < ad < 3/4:
+            return reward * 1.2
         else:
-            step = self.__step(REF_W/6, nx, ny, tpx, tpy)
-            return reward * (1 - step)
+            if ad <= 0.5:
+                step = ad + 0.5
+            else:
+                step = 1 - ad + 0.5
+            return reward * max(0.3, step)
 
     def switch(self, agent):
-        del agent.role
         agent.role = Attacker()
 
     def decide(self, *args):
@@ -223,7 +238,7 @@ class Defender(AD):
         agent_pos = [state[0], state[1]]
         ball_pos = [state[8], state[9]]
         teammate_pos = [state[4], state[5]]
-        teammate_info  = teammate.role.info(teammate_pos, ball_pos)
+        teammate_info = teammate.role.info(teammate_pos, ball_pos)
 
         if self.info(agent_pos, ball_pos) <= teammate_info:
             self.switch(agent)
@@ -262,7 +277,7 @@ class Bottom(TB):
     def reward(self, *args):
         prev_state = args[0]
         state = args[1]
-        reward = args[2]
+        reward = args[2] + 0.3
 
         # previous state
         px = prev_state[0]
@@ -304,7 +319,7 @@ class Top(TB):
     def reward(self, *args):
         prev_state = args[0]
         state = args[1]
-        reward = args[2]
+        reward = args[2] + 0.3
 
         # previous state
         px = prev_state[0]

@@ -1,4 +1,5 @@
 # From https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO.py
+from time import sleep
 
 from agents_wraps.baseppo import BaseTeam
 
@@ -14,7 +15,7 @@ import os
 import sys
 sys.path.append('../slimevolleygymrepo')
 
-from roles import Attacker, Defender 
+from roles import Attacker, Defender, Bottom, Top
 
 ################################## set device ##################################
 
@@ -174,7 +175,8 @@ class PPO:
         self.MseLoss = nn.MSELoss()
 
         self.teammate = None
-        self.role = Attacker() if attacker else Defender()
+        #self.role = Attacker() if attacker else Defender()
+        self.role = Top() if attacker else Bottom()
 
     def select_action(self, state):
         with torch.no_grad():
@@ -319,12 +321,11 @@ class ROLES_TEAM(BaseTeam):
         print_freq = total_timesteps / 10
         checkpoint_model_freq = 10000
 
-        role_decide_freq = 5
+        role_decide_freq = 1
 
         t = 1
         # training loop
         while time_step < total_timesteps:
-
             state_1, state_2 = self.env.reset()
             current_ep_reward = 0
             done = False
