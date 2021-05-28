@@ -243,7 +243,6 @@ class Defender(AD):
         if self.info(agent_pos, ball_pos) <= teammate_info:
             self.switch(agent)
 
-
 # -------- Floor is Lava -------- #
 class TB(Role):
     @abstractmethod

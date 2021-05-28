@@ -21,6 +21,8 @@ from slimevolleygym import BaselinePolicy
 
 from agents_wraps.ppo2 import PPO_TEAM
 from agents_wraps.ppo_roles import ROLES_TEAM
+from agents_wraps.ppo_top_bot import TOP_BOT_TEAM
+from agents_wraps.ppo_leader import LEADER_TEAM
 
 class MultiAgentBaselinePolicy(BaselinePolicy):
     def __init__(self, env):
@@ -71,15 +73,15 @@ def rollout(env, policy_1, policy_2, render_mode=False):
 
     total_reward += reward
 
-    if not policy_1.agent1 == None and not policy_1.agent1.roles:
-        policy_1.decide_role(obs_1, obs_2)
+    # if not policy_1.agent1 == None and hasattr(policy_1.agent1, 'roles'):
+    #     policy_1.decide_role(obs_1, obs_2)
     
-    if not policy_2.agent1 == None and not policy_2.agent1.roles:
-        policy_2.decide_role(obs_1, obs_2)
+    # if not policy_2.agent1 == None and hasattr(policy_2.agent1, 'roles'):
+    #     policy_2.decide_role(obs_1, obs_2)
 
   return total_reward
 
-def evaluate_multiagent(env, policy_1, policy_2, n_trials=1000, init_seed=721):
+def evaluate_multiagent(env, policy_1, policy_2, n_trials=500, init_seed=721):
     print("2v2 Slimevolley Evaluation")
     history = []
     for i in range(1, n_trials+1):
@@ -93,23 +95,23 @@ def evaluate_multiagent(env, policy_1, policy_2, n_trials=1000, init_seed=721):
 
 if __name__=="__main__":
 
-    APPROVED_MODELS = ["baseline", "ppo", "ppo_ad"]
+    APPROVED_MODELS = ["baseline", "ppo", "ppo_ad", "ppo_top_bot", "ppo_leader"]
 
     def check_choice(choice):
         choice = choice.lower()
-        if choice not in APPROVED_MODELS:
-            return False
-        return True
+        return choice in APPROVED_MODELS
 
     MODEL = {
         "baseline": MultiAgentBaselinePolicy,
         "ppo": PPO_TEAM,
-        "ppo_ad": ROLES_TEAM
+        "ppo_ad": ROLES_TEAM,
+        "ppo_top_bot": TOP_BOT_TEAM,
+        "ppo_leader": LEADER_TEAM
     }
 
     parser = argparse.ArgumentParser(description='Evaluate pre-trained agents against each other.')
-    parser.add_argument('--left', help='choice of (baseline, ppo, ...)', type=str, default="baseline")
-    parser.add_argument('--right', help='choice of (baseline, ppo, ...)', type=str, default="ppo")
+    parser.add_argument('--left', help='choice of (baseline, ppo, ppo_ad, ppo_top_bot)', type=str, default="baseline")
+    parser.add_argument('--right', help='choice of (baseline, ppo, ppo_ad, ppo_top_bot)', type=str, default="ppo")
     parser.add_argument('--render', action='store_true', help='render to screen?', default=False)
 
     args = parser.parse_args()
