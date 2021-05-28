@@ -14,22 +14,21 @@ warnings.filterwarnings("ignore", category=UserWarning, module='gym')
 import sys
 sys.path.append('../slimevolleygymrepo')
 
-import gym
-import os
 import numpy as np
 import argparse
 import slimevolleygym 
 from slimevolleygym import BaselinePolicy
-from time import sleep
 
 from agents_wraps.ppo2 import PPO_TEAM
+from agents_wraps.ppo_roles import ROLES_TEAM
 
 class MultiAgentBaselinePolicy(BaselinePolicy):
     def __init__(self, env):
         super(MultiAgentBaselinePolicy, self).__init__()
+        self.agent1 = None
 
     def predict(self, obs_1, obs_2):
-        return self.predict(obs_1), self.predict(obs_2)
+        return super().predict(obs_1), super().predict(obs_2)
 
 class SlimeVolleyEvalEnv(slimevolleygym.SlimeVolleyEnv):
     # wrapper over the normal single player env, but loads the best self play model
@@ -37,6 +36,7 @@ class SlimeVolleyEvalEnv(slimevolleygym.SlimeVolleyEnv):
         super(SlimeVolleyEvalEnv, self).__init__()
         self.opponent = None
         self.renderMode = renderMode
+        self.survival_bonus = False
 
     def set_opponent(self, opponent):
         self.opponent = opponent
@@ -65,30 +65,35 @@ def rollout(env, policy_1, policy_2, render_mode=False):
   while not done:
 
     action_1, action_2 = policy_1.predict(obs_1, obs_2)
-    obs_arr, reward, done, info = env.step(action_1, action_2)
+    obs_arr, reward, done, _ = env.step(action_1, action_2)
     obs_1 = obs_arr[0]
     obs_2 = obs_arr[1]
 
     total_reward += reward
+
+    if not policy_1.agent1 == None and not policy_1.agent1.roles:
+        policy_1.decide_role(obs_1, obs_2)
+    
+    if not policy_2.agent1 == None and not policy_2.agent1.roles:
+        policy_2.decide_role(obs_1, obs_2)
 
   return total_reward
 
 def evaluate_multiagent(env, policy_1, policy_2, n_trials=1000, init_seed=721):
     print("2v2 Slimevolley Evaluation")
     history = []
-    for i in range(n_trials):
+    for i in range(1, n_trials+1):
         env.seed(seed=init_seed+i)
         cumulative_score = rollout(env, policy_1, policy_2, render_mode=render_mode)
         print("cumulative score #", i, ":", cumulative_score)
         history.append(cumulative_score)
 
-        # TODO: Check if agents have a role and update it
 
     return history
 
 if __name__=="__main__":
 
-    APPROVED_MODELS = ["baseline", "ppo"]
+    APPROVED_MODELS = ["baseline", "ppo", "ppo_ad"]
 
     def check_choice(choice):
         choice = choice.lower()
@@ -98,7 +103,8 @@ if __name__=="__main__":
 
     MODEL = {
         "baseline": MultiAgentBaselinePolicy,
-        "ppo": PPO_TEAM
+        "ppo": PPO_TEAM,
+        "ppo_ad": ROLES_TEAM
     }
 
     parser = argparse.ArgumentParser(description='Evaluate pre-trained agents against each other.')
@@ -131,5 +137,5 @@ if __name__=="__main__":
     history = evaluate_multiagent(env, policy_1, policy_2)
 
     print("history dump:", history)
-    print(right_agent_choice+" scored", np.round(np.mean(history), 3), "±", np.round(np.std(history), 3), "vs",
+    print(right_agent_choice + " scored", np.round(np.mean(history), 3), "±", np.round(np.std(history), 3), "vs",
         left_agent_choice, "over")
