@@ -227,3 +227,130 @@ class Defender(AD):
 
         if self.info(agent_pos, ball_pos) <= teammate_info:
             self.switch(agent)
+
+# -------- Floor is Lava -------- #
+class TB(Role):
+    @abstractmethod
+    def actions(self):
+        pass
+
+    @abstractmethod
+    def reward(self, *args):
+        pass
+
+    def potential(self, x, y, ox, oy):
+        dx = ox - x
+        dy = oy - y
+        return dx*dx+dy*dy
+
+    @abstractmethod
+    def switch(self, agent):
+        pass
+
+    #@abstractmethod
+    def info(self, *args):
+        pass
+
+    #@abstractmethod
+    def decide(self, *args):
+        pass
+
+class Bottom(TB):
+    def actions(self):
+        pass
+
+    def reward(self, *args):
+        prev_state = args[0]
+        state = args[1]
+        reward = args[2]
+
+        # previous state
+        px = prev_state[0]
+        py = prev_state[1]
+        # next state
+        nx = state[0]
+        ny = state[1]
+        # ball previous state
+        bpx = prev_state[8]
+        bpy = prev_state[9]
+        # ball next state
+        bnx = state[8]
+        bny = state[9]
+
+        # Distance between Bottom and Ball
+        pdist2 = self.potential(px, py, bpx, bpy)
+        ndist2 = self.potential(nx, ny, bnx, bny)
+
+        # Reward agent if it moved closer to the ball
+        if pdist2 > ndist2:
+            return reward * 1.5
+        else:
+           return reward * (-0.5)
+
+        # Punish if agent jumps
+        # if py < ny:
+        #     return reward * (-0.8)
+        # else:
+        #     return reward
+
+    def switch(self, agent):
+        agent.role = Top()
+
+
+class Top(TB):
+    def actions(self):
+        pass
+
+    def reward(self, *args):
+        prev_state = args[0]
+        state = args[1]
+        reward = args[2]
+
+        # previous state
+        px = prev_state[0]
+        py = prev_state[1]
+        # next state
+        nx = state[0]
+        ny = state[1]
+        # ball previous state
+        bpx = prev_state[8]
+        bpy = prev_state[9]
+        # ball next state
+        bnx = state[8]
+        bny = state[9]
+        # teammates previous state
+        tpx = prev_state[4]
+        tpy = prev_state[5]
+        # teammates next state
+        tnx = state[4]
+        tny = state[5]
+
+        # distance between Top and Bottom
+        pdist2_a = self.potential(px, py, tpx, tpy)
+        ndist2_a = self.potential(nx, ny, tnx, tny)
+        # distance between Top and ball
+        pdist2_b = self.potential(px, py, bpx, bpy)
+        ndist2_b = self.potential(nx, ny, bnx, bny)
+
+        # Agent was already on top of teammate (px=tpx)
+        if px == tpx:
+            if nx == tnx: # Reward + for remaining
+                return reward * 1.8
+            else:
+                return reward * (-0.5)
+        
+        # Agent was not on top of teammate
+        else:         
+            if ndist2_b == 4: # Agent touches ball (distance = 1.5 + 0.5), Punish +
+                reward = reward * (-0.8)
+               
+            if pdist2_a > ndist2_a: # Agent is getting closer to teammate
+                return reward * 1.2
+            
+            # Punish if agent is getting further away from teammate
+            else:
+                return reward * (-0.5)
+
+    def switch(self, agent):
+        del agent.role
+        agent.role = Bottom()
