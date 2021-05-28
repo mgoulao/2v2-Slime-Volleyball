@@ -15,7 +15,7 @@ import os
 import sys
 sys.path.append('../slimevolleygymrepo')
 
-from roles import Attacker, Defender 
+from roles import Attacker, Defender, Bottom, Top
 
 ################################## set device ##################################
 
@@ -175,7 +175,8 @@ class PPO:
         self.MseLoss = nn.MSELoss()
 
         self.teammate = None
-        self.role = Attacker() if attacker else Defender()
+        #self.role = Attacker() if attacker else Defender()
+        self.role = Top() if attacker else Bottom()
 
     def select_action(self, state):
         with torch.no_grad():
