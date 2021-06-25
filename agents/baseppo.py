@@ -222,9 +222,7 @@ class BaseTeam:
         return os.path.exists(f'{logdir}/best_model_agent1')
 
     def loadBestModel(self):
-        print(self.logdir)
         bestSaveExists = os.path.exists(f'{self.logdir}/best_model_agent1')
-        print(bestSaveExists)
         if bestSaveExists:
             print("Best Model Loaded!")
             self.load("best_model")

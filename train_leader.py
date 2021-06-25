@@ -6,13 +6,10 @@ run: python train_ppo.py
 Train a PPO policy using Selfplay
 
 """
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module='gym')
-
 import argparse
 
 from agents.ppo_leader import LEADER_TEAM
-from training_scripts.selfplay import SlimeVolleySelfPlayEnv
+from selfplay import SlimeVolleySelfPlayEnv
 
 RENDER_MODE = False
 SELFPLAY = True
