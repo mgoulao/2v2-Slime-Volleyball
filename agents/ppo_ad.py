@@ -1,69 +1,49 @@
 # From https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO.py
 
-from agents.baseppo import BaseTeam, BasePPO, device
+from agents.baseppo import BasePPO
+from time import sleep
 
-import torch
-import numpy as np
+from agents.baseppo import BaseTeam, BasePPO
 
-################################## PPO Leader ##################################
+from roles import Attacker, Defender
 
-class PPO_LEADER(BasePPO):
-    def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip):
-        self.action_dim = self.action_space**2
+
+################################## PPO ##################################
+
+class PPO_AD(BasePPO):
+    def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, attacker=False):
         super().__init__(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
+        self.teammate = None
+        self.role = Attacker() if attacker else Defender()
 
-    def convert_action(self, action):
-        # env_action = np.zeros(self.action_space)
-        # env_action[action%self.action_space] = 1
-        # return env_action
-        return action
-        
-################################## PPO Slave ##################################
+    def reward(self, prev_state, state, reward):
+        return self.role.reward(prev_state, state, reward)
 
-class PPO_SLAVE(BasePPO):
+    def decide(self, state):
+        self.role.decide(self, state, self.teammate)
 
-    def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip):
-        state_dim += 1
-        self.action_dim = action_space        
-        super().__init__(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
+################################## Attacker Defender Team ##################################
 
-    ''' TODO: review this '''
-    def select_action(self, state):
-        with torch.no_grad():
-            state = torch.FloatTensor(state).to(device)
-            action, action_logprob = self.policy_old.act(state)
-        
-        self.buffer.states.append(state)
-        self.buffer.actions.append(action)
-        self.buffer.logprobs.append(action_logprob)
-        return action.item()
+class AD_TEAM(BaseTeam):
 
-    def convert_action(self, action):
-        env_action = np.zeros(self.action_space)
-        env_action[action%self.action_space] = 1
-        return env_action
-
-    
-class LEADER_TEAM(BaseTeam):
-
-    logdir = "./leader_saves"
-    logs  = "logs/leader_1"
+    logdir = "./ad_saves"
+    logs  = "logs/ad_1"
 
     def __init__(self, env, logdir=None):
         super().__init__(env, logdir)
 
-        self.agent1 = PPO_LEADER(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
-        self.agent2 = PPO_SLAVE(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
+        self.agent1 = PPO_AD(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip, attacker=True)
+        self.agent2 = PPO_AD(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip, attacker=False)
+        self.agent1.teammate = self.agent2
+        self.agent2.teammate = self.agent1
 
-    def select_action(self, state1, state2):
-        action1 = self.agent1.select_action(state1)
-        state2 = np.append(state2, action1 // self.action_space)
-        action2 = self.agent2.select_action(state2)
+    def reward(self, prev_state_1, prev_state_2, state_1, state_2, reward):
+        return self.agent1.reward(prev_state_1, state_1, reward), \
+            self.agent2.reward(prev_state_2, state_2, reward)
 
-        if action1 // self.action_space == self.agent2:
-            self.curr_leader_reward = self.LEADER_REWARD 
-        
-        return self.agent1.convert_action(action1), self.agent2.convert_action(action2)
+    def decide_role(self, state_1, state_2):
+        return self.agent1.decide(state_1), \
+            self.agent2.decide(state_2)
 
     def train(self, total_timesteps):
         # printing and logging variables
@@ -84,10 +64,11 @@ class LEADER_TEAM(BaseTeam):
         print_freq = total_timesteps / 10
         checkpoint_model_freq = 10000
 
+        role_decide_freq = 1
+
         t = 1
         # training loop
         while time_step < total_timesteps:
-
             state_1, state_2 = self.env.reset()
             current_ep_reward = 0
             done = False
@@ -95,18 +76,23 @@ class LEADER_TEAM(BaseTeam):
                 # select action with policy
                 action_1, action_2 = self.select_action(state_1, state_2)
                 state_arr, reward, done, _ = self.env.step(action_1, action_2)
+
+                reward_1, reward_2 = self.reward(state_1, state_2, state_arr[0], state_arr[1], reward)
+
                 state_1 = state_arr[0]
                 state_2 = state_arr[1]
 
                 # saving reward and is_terminals
-                self.agent1.buffer.rewards.append(reward)
+                self.agent1.buffer.rewards.append(reward_1)
                 self.agent1.buffer.is_terminals.append(done)
-                self.agent2.buffer.rewards.append(reward+self.curr_leader_reward)
+                self.agent2.buffer.rewards.append(reward_2)
                 self.agent2.buffer.is_terminals.append(done)
-                self.curr_leader_reward = 0
 
                 time_step +=1
                 current_ep_reward += reward
+
+                if time_step % role_decide_freq == 0:
+                    self.decide_role(state_1, state_2)
 
                 # update PPO agent
                 if time_step % update_timestep == 0:
@@ -168,4 +154,4 @@ class LEADER_TEAM(BaseTeam):
     
     @staticmethod
     def bestSaveExists():
-        return BaseTeam.existsBestModel(LEADER_TEAM.logdir)
+        return BaseTeam.existsBestModel(ROLES_TEAM.logdir)

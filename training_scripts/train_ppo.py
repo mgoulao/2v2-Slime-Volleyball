@@ -11,10 +11,10 @@ warnings.filterwarnings("ignore", category=UserWarning, module='gym')
 
 import argparse
 
-from agents_wraps.ppo2 import PPO_TEAM
-from selfplay import SlimeVolleySelfPlayEnv
+from agents.ppo import PPO_TEAM
+from training_scripts.selfplay import SlimeVolleySelfPlayEnv
 
-RENDER_MODE = True #False
+RENDER_MODE = False
 SELFPLAY = True
 
 if __name__=="__main__":

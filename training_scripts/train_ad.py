@@ -6,14 +6,15 @@ run: python train_ppo.py
 Train a PPO policy using Selfplay
 
 """
+from roles import AD
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning, module='gym')
 
 import argparse
 
-from agents_wraps.ppo_roles import ROLES_TEAM
-from selfplay import SlimeVolleySelfPlayEnv
+from agents.ppo_ad import AD_TEAM
+from training_scripts.selfplay import SlimeVolleySelfPlayEnv
 
 RENDER_MODE = True
 SELFPLAY = True
@@ -27,8 +28,8 @@ if __name__ == "__main__":
     RENDER_MODE = args.render
     SELFPLAY = not args.noselfplay
 
-    env = SlimeVolleySelfPlayEnv(ROLES_TEAM, RENDER_MODE, SELFPLAY)
-    teamPPO = ROLES_TEAM(env)
+    env = SlimeVolleySelfPlayEnv(AD_TEAM, RENDER_MODE, SELFPLAY)
+    teamPPO = AD_TEAM(env)
     teamPPO.loadBestModel()
 
     teamPPO.train(int(1e7))

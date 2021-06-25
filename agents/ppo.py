@@ -1,69 +1,24 @@
 # From https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO.py
 
-from agents.baseppo import BaseTeam, BasePPO, device
+from agents.baseppo import BaseTeam, BasePPO
 
-import torch
-import numpy as np
 
-################################## PPO Leader ##################################
+################################## PPO ##################################
 
-class PPO_LEADER(BasePPO):
+class PPO(BasePPO):
     def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip):
-        self.action_dim = self.action_space**2
         super().__init__(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
-
-    def convert_action(self, action):
-        # env_action = np.zeros(self.action_space)
-        # env_action[action%self.action_space] = 1
-        # return env_action
-        return action
-        
-################################## PPO Slave ##################################
-
-class PPO_SLAVE(BasePPO):
-
-    def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip):
-        state_dim += 1
-        self.action_dim = action_space        
-        super().__init__(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
-
-    ''' TODO: review this '''
-    def select_action(self, state):
-        with torch.no_grad():
-            state = torch.FloatTensor(state).to(device)
-            action, action_logprob = self.policy_old.act(state)
-        
-        self.buffer.states.append(state)
-        self.buffer.actions.append(action)
-        self.buffer.logprobs.append(action_logprob)
-        return action.item()
-
-    def convert_action(self, action):
-        env_action = np.zeros(self.action_space)
-        env_action[action%self.action_space] = 1
-        return env_action
-
     
-class LEADER_TEAM(BaseTeam):
+class PPO_TEAM(BaseTeam):
 
-    logdir = "./leader_saves"
-    logs  = "logs/leader_1"
+    logdir = "./ppo_saves"
+    logs  = "logs/ppo_1"
 
     def __init__(self, env, logdir=None):
         super().__init__(env, logdir)
-
-        self.agent1 = PPO_LEADER(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
-        self.agent2 = PPO_SLAVE(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
-
-    def select_action(self, state1, state2):
-        action1 = self.agent1.select_action(state1)
-        state2 = np.append(state2, action1 // self.action_space)
-        action2 = self.agent2.select_action(state2)
-
-        if action1 // self.action_space == self.agent2:
-            self.curr_leader_reward = self.LEADER_REWARD 
-        
-        return self.agent1.convert_action(action1), self.agent2.convert_action(action2)
+    
+        self.agent1 = PPO(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
+        self.agent2 = PPO(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
 
     def train(self, total_timesteps):
         # printing and logging variables
@@ -101,9 +56,8 @@ class LEADER_TEAM(BaseTeam):
                 # saving reward and is_terminals
                 self.agent1.buffer.rewards.append(reward)
                 self.agent1.buffer.is_terminals.append(done)
-                self.agent2.buffer.rewards.append(reward+self.curr_leader_reward)
+                self.agent2.buffer.rewards.append(reward)
                 self.agent2.buffer.is_terminals.append(done)
-                self.curr_leader_reward = 0
 
                 time_step +=1
                 current_ep_reward += reward
@@ -168,4 +122,4 @@ class LEADER_TEAM(BaseTeam):
     
     @staticmethod
     def bestSaveExists():
-        return BaseTeam.existsBestModel(LEADER_TEAM.logdir)
+        return BaseTeam.existsBestModel(PPO_TEAM.logdir)
