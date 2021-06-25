@@ -7,14 +7,6 @@
 * PPO with Top/Bottom roles
 * PPO with Leader
 
-## Structure
-
-```
---
- |- slimevolleygymrepo (Fork of the original environment with our changes)
- |- study (all scripts to train and evaluate the agents)
-```
-
 ## Requirements
 
 ### Languages
