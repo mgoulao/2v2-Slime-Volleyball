@@ -1,11 +1,11 @@
 from setuptools import setup
 
 setup(
-    name='slimevolleygym',
-    version='0.1.0',
+    name='multiagentslimevolleygym',
+    version='0.0.1',
     keywords='games, environment, agent, rl, ai, gym',
-    url='https://github.com/hardmaru/slimevolleygym',
-    description='Slime Volleyball Gym Environment',
+    url='',
+    description='2v2 Slime Volleyball Gym Environment',
     packages=['slimevolleygym'],
     install_requires=[
         'gym>=0.9.4',

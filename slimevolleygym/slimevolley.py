@@ -1046,8 +1046,8 @@ class FrameStack(gym.Wrapper):
         self.frames.append(obs)
     return self._get_ob()
 
-  def step(self, action):
-    obs, reward, done, info = self.env.step(action)
+  def step(self, action1, action2, action3, action4):
+    obs, reward, done, info = self.env.step(action1, action2, action3, action4)
     self.frames.append(obs)
     return self._get_ob(), reward, done, info
 
@@ -1111,7 +1111,9 @@ def render_atari(obs):
   tempObs = np.concatenate(tempObs, axis=1)
   tempObs = np.expand_dims(tempObs, axis=2)
   tempObs = np.concatenate([tempObs*255.0] * 3, axis=2).astype(np.uint8)
+  print(tempObs)
   tempObs = cv2.resize(tempObs, (84 * 8, 84 * 2), interpolation=cv2.INTER_NEAREST)
+  print(tempObs)
   return np.concatenate([latest, tempObs], axis=0)
 
 ####################
