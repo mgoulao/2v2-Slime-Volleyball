@@ -25,8 +25,6 @@ from game_settings import REF_W, REF_H, REF_U, REF_WALL_WIDTH, REF_WALL_HEIGHT, 
   MAX_BALL_SPEED, TIMESTEP, NUDGE, FRICTION, INIT_DELAY_FRAMES, GRAVITY, MAXLIVES, WINDOW_WIDTH, WINDOW_HEIGHT, FACTOR, \
   PIXEL_MODE, PIXEL_SCALE, PIXEL_WIDTH, PIXEL_HEIGHT, RENDER_MODE
 
-from roles import Attacker, Defender, Top, Bottom, Vanilla
-
 np.set_printoptions(threshold=20, precision=3, suppress=True, linewidth=200)
 
 def setNightColors():
@@ -347,7 +345,7 @@ class RelativeState:
 
 class Agent:
   """ keeps track of the agent in the game. note this is not the policy network """
-  def __init__(self, dir, x, y, c, role):
+  def __init__(self, dir, x, y, c):
     self.dir = dir # -1 means left, 1 means right player for symmetry.
     self.x = x
     self.y = y
@@ -360,7 +358,6 @@ class Agent:
     self.state = RelativeState()
     self.emotion = "happy" # hehe...
     self.life = MAXLIVES
-    self.role = role
 
   def lives(self):
     return self.life
@@ -608,10 +605,10 @@ class Game:
     ball_vx = self.np_random.uniform(low=-20, high=20)
     ball_vy = self.np_random.uniform(low=10, high=25)
     self.ball = Particle(0, REF_W/4, ball_vx, ball_vy, 0.5, c=BALL_COLOR)
-    self.agent1 = Agent(1, REF_W / 6, 1.5, c=AGENT1_COLOR, role=Bottom())
-    self.agent2 = Agent(1, REF_W/3, 1.5, c=AGENT2_COLOR, role=Top())
-    self.agent3 = Agent(-1, -REF_W/6, 1.5, c=AGENT3_COLOR, role=Vanilla())
-    self.agent4 = Agent(-1, -REF_W/3, 1.5, c=AGENT4_COLOR, role=Vanilla())
+    self.agent1 = Agent(1, REF_W / 6, 1.5, c=AGENT1_COLOR)
+    self.agent2 = Agent(1, REF_W/3, 1.5, c=AGENT2_COLOR)
+    self.agent3 = Agent(-1, -REF_W/6, 1.5, c=AGENT3_COLOR)
+    self.agent4 = Agent(-1, -REF_W/3, 1.5, c=AGENT4_COLOR)
     self.agent1.updateState(self.agent2, self.ball, self.agent3, self.agent4)
     self.agent2.updateState(self.agent1, self.ball, self.agent3, self.agent4)
     self.agent3.updateState(self.agent4, self.ball, self.agent1, self.agent2)
@@ -1122,28 +1119,22 @@ def render_atari(obs):
 ####################
 
 register(
-    id='SlimeVolley-v0',
-    entry_point='slimevolleygym.slimevolley:SlimeVolleyEnv'
-)
-
-# TODO: Create a new entry point
-register(
     id='MultiAgentSlimeVolley-v0',
     entry_point='slimevolleygym.slimevolley:SlimeVolleyEnv'
 )
 
 register(
-    id='SlimeVolleyPixel-v0',
+    id='MultiAgentSlimeVolleyPixel-v0',
     entry_point='slimevolleygym.slimevolley:SlimeVolleyPixelEnv'
 )
 
 register(
-    id='SlimeVolleyNoFrameskip-v0',
+    id='MultiAgentSlimeVolleyNoFrameskip-v0',
     entry_point='slimevolleygym.slimevolley:SlimeVolleyAtariEnv'
 )
 
 register(
-    id='SlimeVolleySurvivalNoFrameskip-v0',
+    id='MultiAgentSlimeVolleySurvivalNoFrameskip-v0',
     entry_point='slimevolleygym.slimevolley:SlimeVolleySurvivalAtariEnv'
 )
 
@@ -1234,7 +1225,7 @@ if __name__=="__main__":
     env.viewer.window.on_key_press = key_press
     env.viewer.window.on_key_release = key_release
 
-  obs = env.reset()
+  obs1, obs2 = env.reset()
 
   steps = 0
   total_reward = 0
@@ -1250,27 +1241,23 @@ if __name__=="__main__":
     if manualMode1: # override with keyboard
       action1 = manualAction1
     else:
-      action1 = policy.predict(obs) 
+      action1 = policy.predict(obs1) 
     
     if manualMode2: # override with keyboard
       action2 = manualAction2
-      obs, reward, done, _ = env.step(action1, action2, action3, action4) 
     else:
-      obs, reward, done, _ = env.step(action1)
+      action2 = policy.predict(obs2) 
 
     if manualMode3:
       action3 = manualAction3
-      obs, reward, done, _ = env.step(action1, action2, action3, action4) 
-    else:
-      obs, reward, done, _ = env.step(action1)
       
     if manualMode4:
       action4 = manualAction4
-      obs, reward, done, _ = env.step(action1, action2, action3, action4) 
-    else:
-      obs, reward, done, _ = env.step(action1)
 
-    if reward > 0 or reward < 0:
+    obs, reward, done, _ = env.step(action1, action2, action3, action4) 
+    obs1, obs2 = obs
+    
+    if not reward == 0 and not env.survival_bonus:
       print("reward", reward)
       manualMode1 = False
       manualMode2 = False

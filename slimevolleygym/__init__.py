@@ -1,3 +1,3 @@
+import slimevolleygym.game_settings
 import slimevolleygym.slimevolley
-import slimevolleygym.mlp
 from slimevolleygym.slimevolley import *
