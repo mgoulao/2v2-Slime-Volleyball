@@ -21,7 +21,7 @@ from gym.envs.registration import register
 import numpy as np
 import cv2 # installed with gym anyways
 from collections import deque
-from game_settings import REF_W, REF_H, REF_U, REF_WALL_WIDTH, REF_WALL_HEIGHT, PLAYER_SPEED_X, PLAYER_SPEED_Y, \
+from slimevolleygym.game_settings import REF_W, REF_H, REF_U, REF_WALL_WIDTH, REF_WALL_HEIGHT, PLAYER_SPEED_X, PLAYER_SPEED_Y, \
   MAX_BALL_SPEED, TIMESTEP, NUDGE, FRICTION, INIT_DELAY_FRAMES, GRAVITY, MAXLIVES, WINDOW_WIDTH, WINDOW_HEIGHT, FACTOR, \
   PIXEL_MODE, PIXEL_SCALE, PIXEL_WIDTH, PIXEL_HEIGHT, RENDER_MODE
 
@@ -844,8 +844,9 @@ class SlimeVolleyEnv(gym.Env):
 
   def getObs(self):
     if self.from_pixels:
-      obs = self.render(mode='state')
-      self.canvas = obs
+      obs1 = self.render(mode='state')
+      obs2 = obs1
+      self.canvas = obs1
     else:
       obs1 = self.game.agent1.getObservation()
       obs2 = self.game.agent2.getObservation()
@@ -879,15 +880,14 @@ class SlimeVolleyEnv(gym.Env):
 
     if self.atari_mode:
       action1 = self.discreteToBox(action1)
-      if self.action2 is not None:
+      if action2 is not None:
         action2 = self.discreteToBox(action2)
       if action3 is not None:
         action3 = self.discreteToBox(action3)
-      if self.action4 is not None:
+      if action4 is not None:
         action4 = self.discreteToBox(action4)
 
     if isinstance(self.policy, BaselinePolicy):
-
       if action3 is None: # override baseline policy
         obs = self.game.agent3.getObservation()
         action3 = self.policy.predict(obs)
@@ -1258,7 +1258,6 @@ if __name__=="__main__":
     obs1, obs2 = obs
     
     if not reward == 0 and not env.survival_bonus:
-      print("reward", reward)
       manualMode1 = False
       manualMode2 = False
       manualMode3 = False

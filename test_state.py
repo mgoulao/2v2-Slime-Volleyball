@@ -5,6 +5,7 @@ FPS (no-render): 100000 steps /7.956 seconds. 12.5K/s.
 """
 
 import math
+from slimevolleygym.slimevolley import SlimeVolleyEnv
 import numpy as np
 import gym
 import slimevolleygym
@@ -96,7 +97,7 @@ if __name__=="__main__":
 
   policy = slimevolleygym.BaselinePolicy() # defaults to use RNN Baseline for player
 
-  env = gym.make("SlimeVolley-v0")
+  env = gym.make("MultiAgentSlimeVolley-v0")
   env.seed(np.random.randint(0, 10000))
   #env.seed(689)
 
@@ -105,7 +106,7 @@ if __name__=="__main__":
     env.viewer.window.on_key_press = key_press
     env.viewer.window.on_key_release = key_release
 
-  obs = env.reset()
+  obs1, obs2 = env.reset()
 
   steps = 0
   total_reward = 0
@@ -121,25 +122,23 @@ if __name__=="__main__":
     if manualMode1: # override with keyboard
       action1 = manualAction1
     else:
-      action1 = policy.predict(obs)
-
-    if manualMode2:
+      action1 = policy.predict(obs1) 
+    
+    if manualMode2: # override with keyboard
       action2 = manualAction2
-      obs, reward, done, _ = env.step(action1, action2, action3, action4)
     else:
-      obs, reward, done, _ = env.step(action1)
+      action2 = policy.predict(obs2) 
+
     if manualMode3:
       action3 = manualAction3
-      obs, reward, done, _ = env.step(action1, action2, action3, action4)
-    else:
-      obs, reward, done, _ = env.step(action1)
+      
     if manualMode4:
       action4 = manualAction4
-      obs, reward, done, _ = env.step(action1, action2, action3, action4)
-    else:
-      obs, reward, done, _ = env.step(action1)
 
-    if reward > 0 or reward < 0:
+    obs, reward, done, _ = env.step(action1, action2, action3, action4) 
+    obs1, obs2 = obs
+    
+    if not reward == 0 and not env.survival_bonus:
       manualMode1 = False
       manualMode2 = False
       manualMode3 = False

@@ -37,7 +37,7 @@ class NoopResetEnv(gym.Wrapper):
     assert noops > 0
     obs = None
     for _ in range(noops):
-      obs, _, done, _ = self.env.step(self.noop_action)
+      obs, _, done, _ = self.env.step(self.noop_action, self.noop_action)
       if done:
         obs = self.env.reset(**kwargs)
     return obs
@@ -142,27 +142,83 @@ def toAtariAction(action):
 
 # simulate typical Atari Env:
 if __name__=="__main__":
+  """
+  Example of how to use Gym env, in single or multiplayer setting
 
-  manualAction = [0, 0, 0] # forward, backward, jump
-  manualMode = False
+  Humans can override controls:
 
+  Humans can override controls:
+
+  blue Agent:
+  W - Jump
+  A - Left
+  D - Right
+
+  purple Agent:
+  F - Jump
+  C - Left
+  B - Right
+ 
+  yellow Agent:
+  Up Arrow, Left Arrow, Right Arrow
+
+  orange Agent:
+  I - Jump
+  J - Left
+  L - Right
+  """
+
+  manualAction1 = [0, 0, 0] # forward, backward, jump
+  manualAction2 = [0, 0, 0]
+  manualAction3 = [0, 0, 0]
+  manualAction4 = [0, 0, 0]
+  manualMode1 = False 
+  manualMode2 = False 
+  manualMode3 = False
+  manualMode4 = False 
+  
   # taken from https://github.com/openai/gym/blob/master/gym/envs/box2d/car_racing.py
   def key_press(k, mod):
-    global manualMode, manualAction
-    if k == key.LEFT:  manualAction[0] = 1
-    if k == key.RIGHT: manualAction[1] = 1
-    if k == key.UP:    manualAction[2] = 1
-    if (k == key.LEFT or k == key.RIGHT or k == key.UP): manualMode = True
+    global manualMode1, manualMode2, manualMode3, manualMode4, manualAction1, manualAction2, manualAction3, manualAction4
+    if k == key.LEFT:  manualAction1[0] = 1
+    if k == key.RIGHT: manualAction1[1] = 1
+    if k == key.UP:    manualAction1[2] = 1
+    if (k == key.LEFT or k == key.RIGHT or k == key.UP): manualMode1 = True
+
+    if k == key.J:  manualAction2[0] = 1
+    if k == key.L:  manualAction2[1] = 1
+    if k == key.I:  manualAction2[2] = 1
+    if (k == key.J or k == key.L or k == key.I): manualMode2 = True
+
+    if k == key.D:  manualAction3[0] = 1
+    if k == key.A:  manualAction3[1] = 1
+    if k == key.W:  manualAction3[2] = 1
+    if (k == key.D or k == key.A or k == key.W): manualMode3 = True
+
+    if k == key.B:  manualAction4[0] = 1
+    if k == key.C:  manualAction4[1] = 1
+    if k == key.F:  manualAction4[2] = 1
+    if (k == key.B or k == key.C or k == key.F):manualMode4 = True
 
   def key_release(k, mod):
-    global manualMode, manualAction
-    if k == key.LEFT:  manualAction[0] = 0
-    if k == key.RIGHT: manualAction[1] = 0
-    if k == key.UP:    manualAction[2] = 0
+    global manualMode1, manualMode2, manualMode3, manualMode4, manualAction1, manualAction2, manualAction3, manualAction4
+    if k == key.LEFT:  manualAction1[0] = 0
+    if k == key.RIGHT: manualAction1[1] = 0
+    if k == key.UP:    manualAction1[2] = 0
+    if k == key.J:     manualAction2[0] = 0
+    if k == key.L:     manualAction2[1] = 0
+    if k == key.I:     manualAction2[2] = 0
+    if k == key.D:     manualAction3[0] = 0
+    if k == key.A:     manualAction3[1] = 0
+    if k == key.W:     manualAction3[2] = 0
+    if k == key.B:     manualAction4[0] = 0
+    if k == key.C:     manualAction4[1] = 0
+    if k == key.F:     manualAction4[2] = 0
 
   viewer = rendering.SimpleImageViewer(maxwidth=2160)
 
-  env = gym.make("SlimeVolleyNoFrameskip-v0")
+  #env = gym.make("SlimeVolleyNoFrameskip-v0")
+  env = slimevolleygym.SlimeVolleyAtariEnv()
   # typical Atari processing:
   env = NoopResetEnv(env, noop_max=30)
   env = MaxAndSkipEnv(env, skip=4)
@@ -174,13 +230,27 @@ if __name__=="__main__":
 
   for t in range(10000):
 
-    if manualMode: # override with keyboard
-      #action = toAtariAction(manualAction) # not needed anymore
-      action = manualAction # now just work w/ multibinary if it is not scalar
+    if manualMode1: # override with keyboard
+      action1 = manualAction1
     else:
-      action = 0 #env.action_space.sample() # your agent here (this takes random actions)
+      action1 = 0 
+    
+    if manualMode2: # override with keyboard
+      action2 = manualAction2
+    else:
+      action2 = 0
 
-    obs, reward, done, info = env.step(action)
+    if manualMode3:
+      action3 = manualAction3
+    else:
+      action3 = 0
+      
+    if manualMode4:
+      action4 = manualAction4
+    else:
+      action4 = 0
+
+    obs, reward, done, _ = env.step(action1, action2, action3, action4) 
 
     if reward > 0 or reward < 0:
       print("reward", reward)
