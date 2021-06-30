@@ -1,5 +1,9 @@
 # 2v2 Slime Volley
 
+<p align="left">
+  <img width="100%" src="figures/slime.png"></img>
+</p>
+
 ## Available Agents
 
 * PPO
