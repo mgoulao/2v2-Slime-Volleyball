@@ -11,7 +11,7 @@ import argparse
 from agents.ppo_ad import AD_TEAM
 from selfplay import SlimeVolleySelfPlayEnv
 
-RENDER_MODE = True
+RENDER_MODE = False
 SELFPLAY = True
 
 if __name__ == "__main__":
