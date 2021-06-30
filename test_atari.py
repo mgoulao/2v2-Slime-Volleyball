@@ -37,7 +37,7 @@ class NoopResetEnv(gym.Wrapper):
     assert noops > 0
     obs = None
     for _ in range(noops):
-      obs, _, done, _ = self.env.step(self.noop_action, self.noop_action)
+      obs, _, done, _ = self.env.step([self.noop_action, self.noop_action])
       if done:
         obs = self.env.reset(**kwargs)
     return obs
@@ -250,7 +250,7 @@ if __name__=="__main__":
     else:
       action4 = 0
 
-    obs, reward, done, _ = env.step(action1, action2, action3, action4) 
+    obs, reward, done, _ = env.step([action1, action2, action3, action4]) 
 
     if reward > 0 or reward < 0:
       print("reward", reward)

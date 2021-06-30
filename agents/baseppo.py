@@ -111,7 +111,7 @@ class BasePPO:
         
         self.MseLoss = nn.MSELoss()
 
-    def select_action(self, state):
+    def predict(self, state):
         with torch.no_grad():
             state = torch.FloatTensor(state).to(device)
             action, action_logprob = self.policy_old.act(state)
@@ -211,11 +211,8 @@ class BaseTeam:
         self.lr_critic = 0.001
         self.writer = SummaryWriter(self.logs)
 
-    def select_action(self, state1, state2):
-        return self.agent1.select_action(state1), self.agent2.select_action(state2)
-
     def predict(self, state1, state2):
-        return self.select_action(state1, state2)
+        return self.agent1.predict(state1), self.agent2.predict(state2)
 
     @staticmethod
     def existsBestModel(logdir):

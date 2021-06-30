@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABC
 from math import sqrt
-from game_settings import REF_W
+from slimevolleygym.game_settings import REF_W
 
 SCALED_REF_W = REF_W / 10
 

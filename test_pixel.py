@@ -120,7 +120,7 @@ if __name__=="__main__":
       
     if manualMode4:
       action4 = manualAction4
-    obs, reward, done, info = env.step(action1, action2, action3, action4) 
+    obs, reward, done, info = env.step([action1, action2, action3, action4]) 
 
     otherObs = info['otherObs']
 

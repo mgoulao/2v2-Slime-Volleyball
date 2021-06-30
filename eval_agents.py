@@ -19,7 +19,6 @@ class MultiAgentBaselinePolicy(BaselinePolicy):
 
     def predict(self, obs_1, obs_2):
         return super().predict(obs_1), super().predict(obs_2)
-
 class SlimeVolleyEvalEnv(slimevolleygym.SlimeVolleyEnv):
     # wrapper over the normal single player env, but loads the best self play model
     def __init__(self, renderMode):
@@ -37,13 +36,13 @@ class SlimeVolleyEvalEnv(slimevolleygym.SlimeVolleyEnv):
             print("Please set the opponent first")
             return
 
-        action1, action2 = self.opponent.select_action(obs1, obs2)
+        action1, action2 = self.opponent.predict(obs1, obs2)
         return action1, action2
 
-    def step(self, action_1, action_2):
+    def step(self, action):
         if self.renderMode:
             self.render()
-        return super(SlimeVolleyEvalEnv, self).step(action_1, action_2)
+        return super(SlimeVolleyEvalEnv, self).step(action)
 
 
 def rollout(env, policy_1):
@@ -56,7 +55,7 @@ def rollout(env, policy_1):
   while not done:
 
     action_1, action_2 = policy_1.predict(obs_1, obs_2)
-    obs_arr, reward, done, _ = env.step(action_1, action_2)
+    obs_arr, reward, done, _ = env.step([action_1, action_2])
     obs_1 = obs_arr[0]
     obs_2 = obs_arr[1]
 

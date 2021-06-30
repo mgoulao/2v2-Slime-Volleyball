@@ -28,7 +28,7 @@ class PPO_SLAVE(BasePPO):
         super().__init__(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
 
     ''' TODO: review this '''
-    def select_action(self, state):
+    def predict(self, state):
         with torch.no_grad():
             state = torch.FloatTensor(state).to(device)
             action, action_logprob = self.policy_old.act(state)
@@ -55,10 +55,10 @@ class LEADER_TEAM(BaseTeam):
         self.agent1 = PPO_LEADER(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
         self.agent2 = PPO_SLAVE(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
 
-    def select_action(self, state1, state2):
-        action1 = self.agent1.select_action(state1)
+    def predict(self, state1, state2):
+        action1 = self.agent1.predict(state1)
         state2 = np.append(state2, action1 // self.action_space)
-        action2 = self.agent2.select_action(state2)
+        action2 = self.agent2.predict(state2)
 
         if action1 // self.action_space == self.agent2:
             self.curr_leader_reward = self.LEADER_REWARD 
@@ -93,8 +93,8 @@ class LEADER_TEAM(BaseTeam):
             done = False
             while not done:
                 # select action with policy
-                action_1, action_2 = self.select_action(state_1, state_2)
-                state_arr, reward, done, _ = self.env.step(action_1, action_2)
+                action_1, action_2 = self.predict(state_1, state_2)
+                state_arr, reward, done, _ = self.env.step([action_1, action_2])
                 state_1 = state_arr[0]
                 state_2 = state_arr[1]
 

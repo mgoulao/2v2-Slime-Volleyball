@@ -48,8 +48,8 @@ class PPO_TEAM(BaseTeam):
             done = False
             while not done:
                 # select action with policy
-                action_1, action_2 = self.select_action(state_1, state_2)
-                state_arr, reward, done, _ = self.env.step(action_1, action_2)
+                action_1, action_2 = self.predict(state_1, state_2)
+                state_arr, reward, done, _ = self.env.step([action_1, action_2])
                 state_1 = state_arr[0]
                 state_2 = state_arr[1]
 

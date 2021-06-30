@@ -731,7 +731,7 @@ class SlimeVolleyEnv(gym.Env):
   deviates from Gym env. Can be enabled via supplying optional action
   to override the default baseline agent's policy:
 
-  obs1, reward, done, info = env.step(action1, action2)
+  obs1, reward, done, info = env.step([action1, action2])
 
   the next obs for the right agent is returned in the optional
   fourth item from the step() method.
@@ -860,12 +860,21 @@ class SlimeVolleyEnv(gym.Env):
     assert (int(n) == n) and (n >= 0) and (n < 6)
     return self.action_table[n]
 
-  def step(self, action1, action2=None, action3=None, action4=None):
-    """
-    baseAction is only used if multiagent mode is True
-    note: although the action space is multi-binary, float vectors
-    are fine (refer to setAction() to see how they get interpreted)
-    """
+  def step(self, action):
+    '''
+      action: agent 1 action or an array with agents 1,2,3 and 4 actions
+    '''
+    if isinstance(action[0], int) and len(action) == 3: # received only one agent action
+      action1 = action
+      action2 = None
+      action3 = None
+      action4 = None
+    else:
+      action1 = action[0]
+      action2 = action[1] if len(action) >= 2 else None
+      action3 = action[2] if len(action) >= 3 else None
+      action4 = action[3] if len(action) >= 4 else None
+
     done = False
     self.t += 1
 
@@ -895,7 +904,7 @@ class SlimeVolleyEnv(gym.Env):
         obs = self.game.agent4.getObservation()
         action4 = self.policy.predict(obs)
     else:
-      if action3 is None: # override baseline policy
+      if action3 is None: # we assume that the policy is a team
         obs3 = self.game.agent3.getObservation()
         obs4 = self.game.agent4.getObservation()
         action3, action4 = self.policy.predict(obs3, obs4)
@@ -1046,8 +1055,8 @@ class FrameStack(gym.Wrapper):
         self.frames.append(obs)
     return self._get_ob()
 
-  def step(self, action1, action2, action3, action4):
-    obs, reward, done, info = self.env.step(action1, action2, action3, action4)
+  def step(self, action):
+    obs, reward, done, info = self.env.step(action)
     self.frames.append(obs)
     return self._get_ob(), reward, done, info
 
@@ -1080,7 +1089,7 @@ def multiagent_rollout(env, policy_right, policy_left, render_mode=False):
 
     # uses a 2nd (optional) parameter for step to put in the other action
     # and returns the other observation in the 4th optional "info" param in gym's step()
-    obs_right, reward, done, info = env.step(action1, action2, action3, action4)
+    obs_right, reward, done, info = env.step([action1, action2, action3, action4])
     obs_left = info['otherObs']
 
     total_reward += reward
@@ -1256,7 +1265,7 @@ if __name__=="__main__":
     if manualMode4:
       action4 = manualAction4
 
-    obs, reward, done, _ = env.step(action1, action2, action3, action4) 
+    obs, reward, done, _ = env.step([action1, action2, action3, action4]) 
     obs1, obs2 = obs
     
     if not reward == 0 and not env.survival_bonus:
