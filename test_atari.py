@@ -110,7 +110,7 @@ class WarpFrame(gym.ObservationWrapper):
     """
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
     frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
-    return frame
+    return frame[:, :, None]
 
 
 def toAtariAction(action):
@@ -252,12 +252,12 @@ if __name__=="__main__":
 
     obs, reward, done, _ = env.step([action1, action2, action3, action4]) 
 
-    if reward > 0 or reward < 0:
-      print("reward", reward)
-      manualMode = False
-
-    if reward > 0 or reward < 0:
-      print(t, reward)
+    if not reward == 0 and not env.survival_bonus:
+      manualMode1 = False
+      manualMode2 = False
+      manualMode3 = False
+      manualMode4 = False
+      print(f"t: {t}, reward: {reward}")
 
     render_img = render_atari(obs)
     viewer.imshow(render_img)

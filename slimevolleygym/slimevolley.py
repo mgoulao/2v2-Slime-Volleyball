@@ -842,16 +842,16 @@ class SlimeVolleyEnv(gym.Env):
     self.ale = self.game.agent1 # for compatibility for some models that need the self.ale.lives() function
     return [seed]
 
-  def getObs(self):
-    if self.from_pixels:
-      obs1 = self.render(mode='state')
-      obs2 = obs1
-      self.canvas = obs1
-    else:
-      obs1 = self.game.agent1.getObservation()
-      obs2 = self.game.agent2.getObservation()
+  def getStateObs(self):
+    obs1 = self.game.agent1.getObservation()
+    obs2 = self.game.agent2.getObservation()
     return obs1, obs2
-
+  
+  def getPixelObs(self):
+    obs = self.render(mode='state')
+    self.canvas = obs
+    return obs
+  
   def discreteToBox(self, n):
     # convert discrete action n into the actual triplet action
     if isinstance(n, (list, tuple, np.ndarray)): # original input for some reason, just leave it:
@@ -916,8 +916,11 @@ class SlimeVolleyEnv(gym.Env):
 
     reward = self.game.step()
 
-    obs1, obs2 = self.getObs()
-    obs_arr = [obs1, obs2]
+    if self.from_pixels:
+      obs = self.getPixelObs()
+    else:
+      obs1, obs2 = self.getStateObs()
+      obs = obs1, obs2
 
     if self.t >= self.t_limit:
       done = True
@@ -928,7 +931,7 @@ class SlimeVolleyEnv(gym.Env):
     otherObs = None
     if self.multiagent:
       if self.from_pixels:
-        otherObs = cv2.flip(obs1, 1) # horizontal flip
+        otherObs = cv2.flip(obs, 1) # horizontal flip
       else:
         otherObs = self.game.agent3.getObservation()
 
@@ -941,8 +944,8 @@ class SlimeVolleyEnv(gym.Env):
     }
 
     if self.survival_bonus:
-      return obs_arr, reward+0.01, done, info
-    return obs_arr, reward, done, info
+      return obs, reward+0.01, done, info
+    return obs, reward, done, info
 
   def init_game_state(self):
     self.t = 0
@@ -950,7 +953,9 @@ class SlimeVolleyEnv(gym.Env):
 
   def reset(self):
     self.init_game_state()
-    return self.getObs()
+    if self.from_pixels:
+      return self.getPixelObs()
+    return self.getStateObs()
 
   def checkViewer(self):
     # for opengl viewer
@@ -1120,9 +1125,7 @@ def render_atari(obs):
   tempObs = np.concatenate(tempObs, axis=1)
   tempObs = np.expand_dims(tempObs, axis=2)
   tempObs = np.concatenate([tempObs*255.0] * 3, axis=2).astype(np.uint8)
-  print(tempObs)
   tempObs = cv2.resize(tempObs, (84 * 8, 84 * 2), interpolation=cv2.INTER_NEAREST)
-  print(tempObs)
   return np.concatenate([latest, tempObs], axis=0)
 
 ####################
