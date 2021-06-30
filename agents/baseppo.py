@@ -1,3 +1,4 @@
+# From https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO.py
 import os
 
 import torch
@@ -5,7 +6,6 @@ import torch.nn as nn
 from torch.distributions import Categorical
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
-
 
 ################################## set device ##################################
 
@@ -99,6 +99,7 @@ class BasePPO:
         self.K_epochs = K_epochs
         
         self.buffer = RolloutBuffer()
+        self.training = False
 
         self.policy = ActorCritic(state_dim, self.action_dim).to(device)
         self.optimizer = torch.optim.Adam([
@@ -116,9 +117,10 @@ class BasePPO:
             state = torch.FloatTensor(state).to(device)
             action, action_logprob = self.policy_old.act(state)
         
-        self.buffer.states.append(state)
-        self.buffer.actions.append(action)
-        self.buffer.logprobs.append(action_logprob)
+        if self.training:
+            self.buffer.states.append(state)
+            self.buffer.actions.append(action)
+            self.buffer.logprobs.append(action_logprob)
         return self.convert_action(action.item())
 
     def convert_action(self, action):

@@ -1,5 +1,3 @@
-# From https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO.py
-
 from agents.baseppo import BaseTeam, BasePPO, device
 
 import torch
@@ -66,6 +64,9 @@ class LEADER_TEAM(BaseTeam):
         return self.agent1.convert_action(action1), self.agent2.convert_action(action2)
 
     def train(self, total_timesteps):
+        self.agent1.training = True
+        self.agent2.training = True
+
         # printing and logging variables
         print_running_reward = 0
         print_running_episodes = 0
@@ -165,7 +166,9 @@ class LEADER_TEAM(BaseTeam):
             i_episode += 1
 
         self.env.close()
-    
+        self.agent1.training = False
+        self.agent2.training = False
+        
     @staticmethod
     def bestSaveExists():
         return BaseTeam.existsBestModel(LEADER_TEAM.logdir)

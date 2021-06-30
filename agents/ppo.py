@@ -1,5 +1,3 @@
-# From https://github.com/nikhilbarhate99/PPO-PyTorch/blob/master/PPO.py
-
 from agents.baseppo import BaseTeam, BasePPO
 
 
@@ -21,6 +19,9 @@ class PPO_TEAM(BaseTeam):
         self.agent2 = PPO(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
 
     def train(self, total_timesteps):
+        self.agent1.training = True
+        self.agent2.training = True
+        
         # printing and logging variables
         print_running_reward = 0
         print_running_episodes = 0
@@ -119,6 +120,8 @@ class PPO_TEAM(BaseTeam):
             i_episode += 1
 
         self.env.close()
+        self.agent1.training = False
+        self.agent2.training = False
     
     @staticmethod
     def bestSaveExists():
