@@ -386,9 +386,29 @@ class Agent:
     dx = p.x - self.x
     return (dx*dx+dy*dy)
 
+  def boxSphereCollision(self, p):
+    sphere = p if p.y <= self.y else self
+    box = self if p.y <= self.y else p
+
+    minX = box.x - box.r
+    maxX = box.x + box.r
+    minY = box.y
+    maxY = box.y + box.r
+
+    x = max(minX, min(sphere.x, maxX))
+    y = max(minY, min(sphere.y, maxY))
+
+    sumSqr = (x - sphere.x) * (x - sphere.x) + \
+             (y - sphere.y) * (y - sphere.y)
+
+    return sumSqr < sphere.r * sphere.r
+
+  def sphereSphereCollision(self, p):
+    r = self.r + p.r
+    return r*r > self.getDist2(p) # if distance is less than the sum of the radius, then colliding.
+
   def isColliding(self, p): # returns true if it is colliding w/ p
-    r = self.r+p.r
-    return r * r > self.getDist2(p) # if distance is less than total radius, then colliding.
+    return self.boxSphereCollision(p)
 
   def isOnTop(self, abx, aby):
     return abx == 0 and aby*aby <= 2*self.r*self.r
