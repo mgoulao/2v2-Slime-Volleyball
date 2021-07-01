@@ -338,7 +338,9 @@ class RelativeState:
   def getObservation(self):
     result = [self.x, self.y, self.vx, self.vy,
               self.tx, self.ty, self.tvx, self.tvy,
-              self.bx, self.by, self.bvx, self.bvy]
+              self.bx, self.by, self.bvx, self.bvy,
+              self.o1x, self.o1y, self.o1vx, self.o1vy,
+              self.o2x, self.o2y, self.o2vx, self.o2vy]
     scaleFactor = 10.0  # scale inputs to be in the order of magnitude of 10 for neural network.
     result = np.array(result) / scaleFactor
     return result
@@ -580,7 +582,7 @@ class BaselinePolicy:
     self.outputState = np.tanh(np.dot(self.weight, self.inputState)+self.bias)
   def _setInputState(self, obs):
     # obs is: (op is opponent) (tm is team-mate). obs is also from perspective of the agent (x values negated for other agent)
-    [x, y, vx, vy, tm_x, tm_y, tm_vx, tm_vy, ball_x, ball_y, ball_vx, ball_vy] = obs #, op1_x, op1_y, op1_vx, op1_vy, op2_x, op2_y, op2_vx, op2_vy] = obs
+    [x, y, vx, vy, tm_x, tm_y, tm_vx, tm_vy, ball_x, ball_y, ball_vx, ball_vy, op1_x, op1_y, op1_vx, op1_vy, op2_x, op2_y, op2_vx, op2_vy] = obs
     self.inputState[0:self.nGameInput] = np.array([x, y, vx, vy, ball_x, ball_y, ball_vx, ball_vy])
     self.inputState[self.nGameInput:] = self.outputState
   def _getAction(self):
@@ -839,7 +841,7 @@ class SlimeVolleyEnv(gym.Env):
       self.observation_space = spaces.Box(low=0, high=255,
         shape=(PIXEL_HEIGHT, PIXEL_WIDTH, 3), dtype=np.uint8)
     else:
-      high = np.array([np.finfo(np.float32).max] * 12)
+      high = np.array([np.finfo(np.float32).max] * 20)
       self.observation_space = spaces.Box(-high, high)
     self.canvas = None
     self.previous_rgbarray = None

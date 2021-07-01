@@ -204,7 +204,8 @@ class BaseTeam:
 
         self.env = env
 
-        self.state_dim = env.observation_space.shape[0]
+        # we decided to ignore the observations related to the opposing team to make the learning faster (-8)
+        self.state_dim = env.observation_space.shape[0] - 8 
         self.action_space = env.action_space.shape[0] 
         self.K_epochs = 10
         self.eps_clip = 0.2
@@ -214,7 +215,8 @@ class BaseTeam:
         self.writer = SummaryWriter(self.logs)
 
     def predict(self, state1, state2):
-        return self.agent1.predict(state1), self.agent2.predict(state2)
+        # ignore last 8 which are related to the opposing team
+        return self.agent1.predict(state1[:-8]), self.agent2.predict(state2[:-8])
 
     @staticmethod
     def existsBestModel(logdir):

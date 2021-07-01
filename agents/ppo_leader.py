@@ -54,9 +54,9 @@ class LEADER_TEAM(BaseTeam):
         self.agent2 = PPO_SLAVE(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
 
     def predict(self, state1, state2):
-        action1 = self.agent1.predict(state1)
-        state2 = np.append(state2, action1 // self.action_space)
-        action2 = self.agent2.predict(state2)
+        action1 = self.agent1.predict(state1[:-8])
+        state2 = np.append(state2[:-8], action1 // self.action_space)
+        action2 = self.agent2.predict(state2[:-8])
 
         if action1 // self.action_space == self.agent2:
             self.curr_leader_reward = self.LEADER_REWARD 
