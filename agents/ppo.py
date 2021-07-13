@@ -7,7 +7,7 @@ class PPO(BasePPO):
     def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip):
         super().__init__(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
     
-class PPO_TEAM(BaseTeam):
+class PPOTeam(BaseTeam):
 
     logdir = "./ppo_saves"
     logs  = "logs/ppo_1"
@@ -125,4 +125,4 @@ class PPO_TEAM(BaseTeam):
     
     @staticmethod
     def bestSaveExists():
-        return BaseTeam.existsBestModel(PPO_TEAM.logdir)
+        return BaseTeam.existsBestModel(PPOTeam.logdir)

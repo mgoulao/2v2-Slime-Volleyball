@@ -6,7 +6,7 @@ from roles import Bottom, Top
 ################################## PPO Policy ##################################
 
 
-class PPO_TOP_BOT(BasePPO):
+class PPOTopBot(BasePPO):
     def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, attacker=False):
         super().__init__(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
         self.teammate = None
@@ -20,7 +20,7 @@ class PPO_TOP_BOT(BasePPO):
 
 ################################## Top Bot Team ##################################
 
-class TOP_BOT_TEAM(BaseTeam):
+class TopBotTeam(BaseTeam):
 
     logdir = "./top_bot_saves"
     logs  = "logs/top_bot_1"
@@ -28,8 +28,8 @@ class TOP_BOT_TEAM(BaseTeam):
     def __init__(self, env, logdir=None):
         super().__init__(env, logdir)
       
-        self.agent1 = PPO_TOP_BOT(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip, attacker=True)
-        self.agent2 = PPO_TOP_BOT(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip, attacker=False)
+        self.agent1 = PPOTopBot(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip, attacker=True)
+        self.agent2 = PPOTopBot(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip, attacker=False)
         self.agent1.teammate = self.agent2
         self.agent2.teammate = self.agent1
 
@@ -156,4 +156,4 @@ class TOP_BOT_TEAM(BaseTeam):
 
     @staticmethod
     def bestSaveExists():
-        return BaseTeam.existsBestModel(TOP_BOT_TEAM.logdir)
+        return BaseTeam.existsBestModel(TopBotTeam.logdir)

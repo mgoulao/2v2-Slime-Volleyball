@@ -1,14 +1,11 @@
 """
-Train PPO using Selfplay
+Train PPO with Attacker/Defender roles using Selfplay
 
-run: python train_ppo.py
-
-Train a PPO policy using Selfplay
-
+run: python train_ad.py
 """
 import argparse
 
-from agents.ppo_ad import AD_TEAM
+from agents.ppo_ad import ADTeam
 from selfplay import SlimeVolleySelfPlayEnv
 
 RENDER_MODE = False
@@ -23,8 +20,8 @@ if __name__ == "__main__":
     RENDER_MODE = args.render
     SELFPLAY = not args.noselfplay
 
-    env = SlimeVolleySelfPlayEnv(AD_TEAM, RENDER_MODE, SELFPLAY)
-    teamPPO = AD_TEAM(env)
+    env = SlimeVolleySelfPlayEnv(ADTeam, RENDER_MODE, SELFPLAY)
+    teamPPO = ADTeam(env)
     teamPPO.loadBestModel()
 
     teamPPO.train(int(1e7))

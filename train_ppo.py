@@ -8,7 +8,7 @@ Train a PPO policy using Selfplay
 """
 import argparse
 
-from agents.ppo import PPO_TEAM
+from agents.ppo import PPOTeam
 from selfplay import SlimeVolleySelfPlayEnv
 
 RENDER_MODE = False
@@ -23,8 +23,8 @@ if __name__ == "__main__":
     RENDER_MODE = args.render
     SELFPLAY = not args.noselfplay
 
-    env = SlimeVolleySelfPlayEnv(PPO_TEAM, RENDER_MODE, SELFPLAY)
-    teamPPO = PPO_TEAM(env)
+    env = SlimeVolleySelfPlayEnv(PPOTeam, RENDER_MODE, SELFPLAY)
+    teamPPO = PPOTeam(env)
     teamPPO.loadBestModel()
 
     teamPPO.train(int(1e7))

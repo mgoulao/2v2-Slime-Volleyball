@@ -1,14 +1,11 @@
 """
-Train PPO using Selfplay
+Train PPO with Top/Bot roles using Selfplay
 
-run: python train_ppo.py
-
-Train a PPO policy using Selfplay
-
+run: python train_top_bot.py
 """
 import argparse
 
-from agents.ppo_top_bot import TOP_BOT_TEAM
+from agents.ppo_top_bot import TopBotTeam
 from selfplay import SlimeVolleySelfPlayEnv
 
 RENDER_MODE = False
@@ -23,8 +20,8 @@ if __name__ == "__main__":
     RENDER_MODE = args.render
     SELFPLAY = not args.noselfplay
 
-    env = SlimeVolleySelfPlayEnv(TOP_BOT_TEAM, RENDER_MODE, SELFPLAY)
-    teamPPO = TOP_BOT_TEAM(env)
+    env = SlimeVolleySelfPlayEnv(TopBotTeam, RENDER_MODE, SELFPLAY)
+    teamPPO = TopBotTeam(env)
     teamPPO.loadBestModel()
 
     teamPPO.train(int(1e7))

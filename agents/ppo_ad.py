@@ -7,7 +7,7 @@ from roles import Attacker, Defender
 
 ################################## PPO ##################################
 
-class PPO_AD(BasePPO):
+class PPOAttackerDefender(BasePPO):
     def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip, attacker=False):
         super().__init__(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
         self.teammate = None
@@ -21,7 +21,7 @@ class PPO_AD(BasePPO):
 
 ################################## Attacker Defender Team ##################################
 
-class AD_TEAM(BaseTeam):
+class ADTeam(BaseTeam):
 
     logdir = "./ad_saves"
     logs  = "logs/ad_1"
@@ -29,8 +29,8 @@ class AD_TEAM(BaseTeam):
     def __init__(self, env, logdir=None):
         super().__init__(env, logdir)
 
-        self.agent1 = PPO_AD(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip, attacker=True)
-        self.agent2 = PPO_AD(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip, attacker=False)
+        self.agent1 = PPOAttackerDefender(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip, attacker=True)
+        self.agent2 = PPOAttackerDefender(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip, attacker=False)
         self.agent1.teammate = self.agent2
         self.agent2.teammate = self.agent1
 
@@ -156,4 +156,4 @@ class AD_TEAM(BaseTeam):
     
     @staticmethod
     def bestSaveExists():
-        return BaseTeam.existsBestModel(AD_TEAM.logdir)
+        return BaseTeam.existsBestModel(ADTeam.logdir)

@@ -7,10 +7,10 @@ import argparse
 import slimevolleygym 
 from slimevolleygym import BaselinePolicy
 
-from agents.ppo import PPO_TEAM
-from agents.ppo_ad import AD_TEAM
-from agents.ppo_top_bot import TOP_BOT_TEAM
-from agents.ppo_leader import LEADER_TEAM
+from agents.ppo import PPOTeam
+from agents.ppo_ad import ADTeam
+from agents.ppo_top_bot import TopBotTeam
+from agents.ppo_leader import LeaderTeam
 
 class MultiAgentBaselinePolicy(BaselinePolicy):
     def __init__(self, env):
@@ -84,10 +84,10 @@ if __name__=="__main__":
 
     MODEL = {
         "baseline": MultiAgentBaselinePolicy,
-        "ppo": PPO_TEAM,
-        "ppo_ad": AD_TEAM,
-        "ppo_top_bot": TOP_BOT_TEAM,
-        "ppo_leader": LEADER_TEAM
+        "ppo": PPOTeam,
+        "ppo_ad": ADTeam,
+        "ppo_top_bot": TopBotTeam,
+        "ppo_leader": LeaderTeam
     }
 
     parser = argparse.ArgumentParser(description='Evaluate pre-trained agents against each other.')

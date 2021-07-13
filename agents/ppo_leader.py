@@ -5,7 +5,7 @@ import numpy as np
 
 ################################## PPO Leader ##################################
 
-class PPO_LEADER(BasePPO):
+class PPOLeader(BasePPO):
     def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip):
         self.action_dim = self.action_space**2
         super().__init__(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
@@ -16,9 +16,9 @@ class PPO_LEADER(BasePPO):
         # return env_action
         return action
         
-################################## PPO Slave ##################################
+################################## PPO Teammate ##################################
 
-class PPO_SLAVE(BasePPO):
+class PPOTeammate(BasePPO):
 
     def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip):
         state_dim += 1
@@ -42,7 +42,7 @@ class PPO_SLAVE(BasePPO):
         return env_action
 
     
-class LEADER_TEAM(BaseTeam):
+class LeaderTeam(BaseTeam):
 
     logdir = "./leader_saves"
     logs  = "logs/leader_1"
@@ -50,8 +50,8 @@ class LEADER_TEAM(BaseTeam):
     def __init__(self, env, logdir=None):
         super().__init__(env, logdir)
 
-        self.agent1 = PPO_LEADER(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
-        self.agent2 = PPO_SLAVE(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
+        self.agent1 = PPOLeader(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
+        self.agent2 = PPOTeammate(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
 
     def predict(self, state1, state2):
         action1 = self.agent1.predict(state1[:-8])
@@ -171,4 +171,4 @@ class LEADER_TEAM(BaseTeam):
         
     @staticmethod
     def bestSaveExists():
-        return BaseTeam.existsBestModel(LEADER_TEAM.logdir)
+        return BaseTeam.existsBestModel(LeaderTeam.logdir)
