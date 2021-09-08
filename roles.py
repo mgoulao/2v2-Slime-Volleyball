@@ -127,7 +127,7 @@ class Attacker(AD):
         tnx = state[4]
         tny = state[5]
 
-        # Reward agents if the actions are according to role TODO: Check github
+        # Reward agents if the actions are according to role
         if self.potential(px, py, bpx, bpy) > self.potential(nx, ny, bnx, bny):
             reward = (reward + 0.3) * 3
 

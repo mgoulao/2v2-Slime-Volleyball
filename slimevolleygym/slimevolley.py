@@ -886,9 +886,11 @@ class SlimeVolleyEnv(gym.Env):
     '''
       action: agent 1 action or an array with agents 1,2,3 and 4 actions
     '''
-    if isinstance(action[0], int) and len(action) == 3: # received only one agent action
+    if not isinstance(action[0], list) and \
+      not isinstance(action[0], tuple) and \
+      len(action) == 3: # received only one agent action
       action1 = action
-      action2 = None
+      action2 = [0,0,0] # no action
       action3 = None
       action4 = None
     else:
@@ -926,7 +928,7 @@ class SlimeVolleyEnv(gym.Env):
         obs = self.game.agent4.getObservation()
         action4 = self.policy.predict(obs)
     else:
-      if action3 is None: # we assume that the policy is a team
+      if action3 is None:
         obs3 = self.game.agent3.getObservation()
         obs4 = self.game.agent4.getObservation()
         action3, action4 = self.policy.predict(obs3, obs4)

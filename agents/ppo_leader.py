@@ -7,14 +7,23 @@ import numpy as np
 
 class PPOLeader(BasePPO):
     def __init__(self, state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip):
-        self.action_dim = self.action_space**2
+        self.action_dim = action_space**2
         super().__init__(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
 
+    def predict(self, state):
+        with torch.no_grad():
+            state = torch.FloatTensor(state).to(device)
+            action, action_logprob = self.policy_old.act(state)
+        if self.training:
+            self.buffer.states.append(state)
+            self.buffer.actions.append(action)
+            self.buffer.logprobs.append(action_logprob)
+        return action.item()
+
     def convert_action(self, action):
-        # env_action = np.zeros(self.action_space)
-        # env_action[action%self.action_space] = 1
-        # return env_action
-        return action
+        env_action = np.zeros(self.action_space)
+        env_action[action%self.action_space] = 1
+        return env_action
         
 ################################## PPO Teammate ##################################
 
@@ -25,15 +34,14 @@ class PPOTeammate(BasePPO):
         self.action_dim = action_space        
         super().__init__(state_dim, action_space, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
 
-    ''' TODO: review this '''
     def predict(self, state):
         with torch.no_grad():
             state = torch.FloatTensor(state).to(device)
             action, action_logprob = self.policy_old.act(state)
-        
-        self.buffer.states.append(state)
-        self.buffer.actions.append(action)
-        self.buffer.logprobs.append(action_logprob)
+        if self.training:
+            self.buffer.states.append(state)
+            self.buffer.actions.append(action)
+            self.buffer.logprobs.append(action_logprob)
         return action.item()
 
     def convert_action(self, action):
@@ -50,17 +58,18 @@ class LeaderTeam(BaseTeam):
     def __init__(self, env, logdir=None):
         super().__init__(env, logdir)
 
+        self.curr_leader_reward = 0
+
         self.agent1 = PPOLeader(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
         self.agent2 = PPOTeammate(self.state_dim, self.action_space, self.lr_actor, self.lr_critic, self.gamma, self.K_epochs, self.eps_clip)
 
     def predict(self, state1, state2):
-        action1 = self.agent1.predict(state1[:-8])
+        action1 = self.agent1.predict(state1[:-8]) # ignore last 8 which are related to the opposing team
         state2 = np.append(state2[:-8], action1 // self.action_space)
-        action2 = self.agent2.predict(state2[:-8])
+        action2 = self.agent2.predict(state2)
 
         if action1 // self.action_space == self.agent2:
             self.curr_leader_reward = self.LEADER_REWARD 
-        
         return self.agent1.convert_action(action1), self.agent2.convert_action(action2)
 
     def train(self, total_timesteps):
